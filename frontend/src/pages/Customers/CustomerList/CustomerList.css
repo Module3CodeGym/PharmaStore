@@ -1,0 +1,21 @@
+/* CustomerList.css */
+.customer-search-area {
+    background: var(--white);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-100);
+    margin-bottom: var(--spacing-lg);
+}
+
+.loyalty-points-badge {
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+    color: var(--white);
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0, 121, 107, 0.2);
+}
+
+.customer-row-vip {
+    border-left: 4px solid var(--secondary);
+}
