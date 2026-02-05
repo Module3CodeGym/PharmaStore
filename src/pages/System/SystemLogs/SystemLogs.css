@@ -1,0 +1,28 @@
+/* SystemLogs.css */
+.log-row {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85rem;
+}
+
+.log-timestamp {
+    color: var(--gray-500);
+}
+
+.log-action-important {
+    font-weight: 700;
+    color: var(--danger-dark);
+}
+
+.log-filter-panel {
+    background: var(--gray-50);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--gray-300);
+    margin-bottom: var(--spacing-lg);
+}
+
+.module-badge {
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+}

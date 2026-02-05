@@ -1,0 +1,39 @@
+/* StaffList.css */
+.staff-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.staff-member-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    text-align: center;
+    border: 1px solid var(--gray-100);
+    transition: transform var(--transition-base);
+}
+
+.staff-member-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 50px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.admin-role {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.pharmacist-role {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
