@@ -1,22 +1,24 @@
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import './App.css'; 
+import Home from './pages/Home';
+import ProductList from './pages/ProductList';
+import ProductDetail from './pages/ProductDetail';
 
 function App() {
   return (
-    <> 
-     
-      <Header />
-      
-      <main>
-         {/* Nội dung trang chủ/chi tiết sẽ nằm ở đây */}
-         <h1>Chào mừng đến với Nhà thuốc Online</h1>
-         <p>Nội dung đang được cập nhật...</p>
-      </main>
-
-      <Footer />
-    </>
-  )
+    <Router>
+      <div style={{ backgroundColor: '#f4f7f6', minHeight: '100vh' }}>
+        <Header />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/products" element={<ProductList />} />
+          <Route path="/product-detail" element={<ProductDetail />} />
+        </Routes>
+        <Footer />
+      </div>
+    </Router>
+  );
 }
 
 export default App;
