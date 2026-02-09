@@ -1,46 +1,63 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import { Routes, Route } from "react-router-dom";
+import "./App.css";
 
-// Import các file mới
-import DoctorLayout from './pages/Doctor/DoctorLayout';
-import Profile from './pages/Doctor/Profile';
-import Chat from './pages/Doctor/Chat';
-import Products from './pages/Doctor/Products';
-import Prescribe from './pages/Doctor/Prescribe';
-import Orders from './pages/Doctor/Orders';
-import './App.css';
+// Layout
+import UserLayout from "./pages/User/UserLayout";
+
+// Auth
+import Login from "./pages/User/Auth/Login";
+import Register from "./pages/User/Auth/Register";
+import ForgotPassword from "./pages/User/Auth/ForgotPassword";
+
+// Products
+import ProductList from "./pages/User/Products/ProductList";
+import ProductDetail from "./pages/User/Products/ProductDetail";
+
+// Cart
+import Cart from "./pages/User/Cart/Cart";
+import Checkout from "./pages/User/Cart/Checkout";
+
+// Orders
+import MyOrders from "./pages/User/Orders/MyOrders";
+import OrderDetail from "./pages/User/Orders/OrderDetail";
+
+// Profile
+import Profile from "./pages/User/Profile/Profile";
+import UploadPrescription from "./pages/User/UploadPrescription";
+
+// Chat
+import UserChat from "./pages/User/Chat/UserChat";
 
 function App() {
   return (
-    <BrowserRouter>
-      <Header />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        
-        {/* ROUTE CHO BÁC SĨ (NESTED ROUTES) */}
-        <Route path="/doctor" element={<DoctorLayout />}>
-          {/* Mặc định vào /doctor sẽ chuyển hướng ngay sang /doctor/profile */}
-          <Route index element={<Navigate to="profile" replace />} />
-          
-          <Route path="profile" element={<Profile />} />
-          <Route path="chat" element={<Chat />} />
-          <Route path="products" element={<Products />} />
-          <Route path="prescribe" element={<Prescribe />} />
-          <Route path="orders" element={<Orders />} />
-        </Route>
+    <Routes>
 
-      </Routes>
-      <Footer />
-    </BrowserRouter>
-  )
+      {/* AUTH */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+
+      {/* USER */}
+      <Route path="/" element={<UserLayout />}>
+        <Route index element={<ProductList />} />
+
+        <Route path="products" element={<ProductList />} />
+        <Route path="products/:id" element={<ProductDetail />} />
+
+        <Route path="cart" element={<Cart />} />
+        <Route path="checkout" element={<Checkout />} />
+
+        <Route path="orders" element={<MyOrders />} />
+        <Route path="orders/:id" element={<OrderDetail />} />
+
+        <Route path="profile" element={<Profile />} />
+        <Route path="upload-prescription" element={<UploadPrescription />} />
+
+        <Route path="chat" element={<UserChat />} />
+      </Route>
+
+    </Routes>
+  );
 }
-
-const Home = () => (
-    <main style={{textAlign:'center', padding:'50px'}}>
-        <h1>Trang Chủ</h1>
-        <a href="/doctor" className="btn-save">Vào trang Bác Sĩ</a>
-    </main>
-);
 
 export default App;
