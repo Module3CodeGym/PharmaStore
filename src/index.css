@@ -1,0 +1,61 @@
+:root {
+  --primary-color: #00b894; /* Xanh y tế */
+  --secondary-color: #0984e3; /* Xanh dương */
+  --text-color: #2d3436;
+  --bg-light: #f5f6fa;
+  --white: #ffffff;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --error: #e74c3c;
+  --success: #2ecc71;
+  --warning: #f1c40f;
+  --sidebar-width: 260px;
+  --header-height: 60px;
+  --border-radius: 8px;
+  --font-family: "Inter", system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-light);
+  color: var(--text-color);
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+ul {
+  list-style: none;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
