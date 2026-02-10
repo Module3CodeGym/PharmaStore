@@ -1,0 +1,21 @@
+.customer-form-container {
+  background-color: var(--white);
+  padding: 32px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.customer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+/* Reusing styles from ProductForm via global classes if possible, but defining here for safety */
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
