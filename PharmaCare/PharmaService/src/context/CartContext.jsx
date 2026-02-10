@@ -44,8 +44,22 @@ export const CartProvider = ({ children }) => {
   // 4. Tính tổng số lượng sản phẩm (để hiện lên icon đỏ)
   const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
 
+  // 5. Tăng giảm số lượng sản phẩm
+  const updateQuantity = (productId, amount) => {
+    setCartItems(prevItems => 
+      prevItems.map(item => {
+        if (item.id === productId) {
+          const newQuantity = item.quantity + amount;
+          // Nếu số lượng về 0 thì giữ là 1 hoặc xóa 
+          return { ...item, quantity: newQuantity > 0 ? newQuantity : 1 };
+        }
+        return item;
+      })
+    );
+  };
+
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, totalItems }}>
+    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, updateQuantity, totalItems }}>
       {children}
     </CartContext.Provider>
   );
