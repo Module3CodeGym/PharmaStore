@@ -4,16 +4,19 @@ import { useCart } from '../../../context/CartContext';
 import { auth, db } from '../../../firebaseConfig'; 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'; 
 import { onAuthStateChanged } from 'firebase/auth';
-import './Cart.css'; // Đảm bảo file CSS này đã tồn tại
+
+// 1. Import Toastify
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+import './Cart.css';
 
 const Cart = () => {
-  // Lấy hàm updateQuantity từ Context
   const { cartItems, removeFromCart, updateQuantity, clearCart } = useCart();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Kiểm tra đăng nhập
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -21,19 +24,17 @@ const Cart = () => {
     return () => unsubscribe();
   }, []);
 
-  // Hàm format tiền tệ (VND)
   const formatPrice = (amount) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
   };
 
-  // Tính tổng tiền
   const totalPrice = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
-  // Xử lý Thanh toán
   const handleCheckout = async () => {
     if (!user) {
-      alert("Vui lòng đăng nhập để thanh toán!");
-      navigate('/login');
+      // 2. Sử dụng toast thay cho alert
+      toast.warning("Vui lòng đăng nhập để thanh toán!", { position: "top-right" });
+      setTimeout(() => navigate('/login'), 2000); // Chờ 2s cho khách xem toast rồi mới chuyển trang
       return;
     }
 
@@ -41,39 +42,42 @@ const Cart = () => {
 
     setLoading(true);
     try {
-      // 1. Tạo đơn hàng lưu lên Firestore
       const orderData = {
         userId: user.uid,
         userName: user.displayName || user.email,
         userEmail: user.email,
-        items: cartItems, // Lưu danh sách thuốc kèm số lượng và giá tại thời điểm mua
+        items: cartItems,
         totalAmount: totalPrice,
-        status: 'pending', // Trạng thái: Chờ xử lý
-        createdAt: serverTimestamp(), // Lấy giờ server
-        paymentMethod: 'COD' // Mặc định tiền mặt
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        paymentMethod: 'COD'
       };
 
       await addDoc(collection(db, "orders"), orderData);
 
-      // 2. Xóa sạch giỏ hàng sau khi mua
       clearCart();
 
-      // 3. Thông báo và chuyển hướng
-      alert("Đặt hàng thành công! Bác sĩ sẽ sớm liên hệ xác nhận.");
-      navigate('/orders'); // Chuyển sang trang Lịch sử đơn hàng
+      // 3. Thông báo thành công
+      toast.success("Đặt hàng thành công! Bác sĩ sẽ sớm liên hệ xác nhận.", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+
+      setTimeout(() => navigate('/orders'), 3000);
 
     } catch (error) {
       console.error("Lỗi thanh toán:", error);
-      alert("Có lỗi xảy ra, vui lòng thử lại.");
+      // 4. Thông báo lỗi
+      toast.error("Có lỗi xảy ra, vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Giao diện khi giỏ hàng trống
   if (cartItems.length === 0) {
     return (
       <div className="empty-cart-container">
+        <ToastContainer /> {/* Vẫn cần để hiện toast nếu user nhấn nút khi chưa đăng nhập */}
         <img 
           src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" 
           alt="Empty" 
@@ -89,10 +93,12 @@ const Cart = () => {
 
   return (
     <div className="cart-page">
+      {/* 5. Cấu hình ToastContainer để hiển thị toast */}
+      <ToastContainer pauseOnHover={false} theme="colored" />
+      
       <h2 className="cart-title">Giỏ hàng của bạn ({cartItems.length} sản phẩm)</h2>
 
       <div className="cart-content">
-        {/* --- DANH SÁCH SẢN PHẨM --- */}
         <div className="cart-list">
           <table className="table">
             <thead>
@@ -113,51 +119,39 @@ const Cart = () => {
                         src={item.img} 
                         alt={item.name} 
                         style={{ width: '60px', height: '60px', objectFit: 'cover', marginRight: '15px', borderRadius: '8px' }}
-                        onError={(e) => e.target.src="https://via.placeholder.com/60"} 
                       />
                       <div>
                         <strong style={{ fontSize: '1.1rem' }}>{item.name}</strong>
                       </div>
                     </div>
                   </td>
-                  
                   <td style={{ verticalAlign: 'middle' }}>{formatPrice(item.price)}</td>
-                  
-                  {/* Cột Số Lượng có nút Tăng/Giảm */}
                   <td style={{ verticalAlign: 'middle' }}>
                     <div className="qty-control d-flex align-items-center">
                       <button 
                         className="btn btn-sm btn-outline-secondary"
-                        style={{ width: '30px', height: '30px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onClick={() => updateQuantity(item.id, -1)}
-                        disabled={item.quantity <= 1} // Vô hiệu hóa nút giảm nếu số lượng là 1
-                      >
-                        -
-                      </button>
-                      
+                        disabled={item.quantity <= 1}
+                      > - </button>
                       <span className="mx-3 fw-bold">{item.quantity}</span>
-                      
                       <button 
                         className="btn btn-sm btn-outline-secondary"
-                        style={{ width: '30px', height: '30px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onClick={() => updateQuantity(item.id, 1)}
-                      >
-                        +
-                      </button>
+                      > + </button>
                     </div>
                   </td>
-
                   <td className="subtotal" style={{ verticalAlign: 'middle', fontWeight: 'bold', color: '#2c3e50' }}>
                     {formatPrice(item.price * item.quantity)}
                   </td>
-                  
                   <td style={{ verticalAlign: 'middle' }}>
                     <button 
                       className="btn-remove btn btn-danger btn-sm" 
-                      onClick={() => removeFromCart(item.id)}
-                      title="Xóa khỏi giỏ"
+                      onClick={() => {
+                        removeFromCart(item.id);
+                        toast.info(`Đã xóa ${item.name}`);
+                      }}
                     >
-                      <i className="fas fa-trash"></i> Xóa
+                      Xóa
                     </button>
                   </td>
                 </tr>
@@ -166,7 +160,6 @@ const Cart = () => {
           </table>
         </div>
 
-        {/* --- TỔNG TIỀN & THANH TOÁN --- */}
         <div className="cart-summary">
           <h3>Tổng cộng</h3>
           <div className="summary-row">
@@ -187,7 +180,6 @@ const Cart = () => {
             className="btn-checkout" 
             onClick={handleCheckout} 
             disabled={loading}
-            style={{ width: '100%', padding: '15px', marginTop: '20px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
           >
             {loading ? "Đang xử lý..." : "Tiến hành đặt hàng"}
           </button>

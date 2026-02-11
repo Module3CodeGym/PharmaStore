@@ -47,6 +47,7 @@ import DoctorExam from "./pages/Doctor/Exam/DoctorExam";
 import DoctorExamList from "./pages/Doctor/Exam/DoctorExamList";
 import DoctorPatients from "./pages/Doctor/Patients/DoctorPatients";
 import PatientDetail from "./pages/Doctor/Patients/PatientDetail";
+import DoctorPrescriptions from "./pages/Doctor/Prescriptions/DoctorPrescriptions";
 
 // Pharmacist Pages
 import PharmacistRegister from "./pages/User/Auth/PharmacistRegister";
@@ -105,6 +106,7 @@ function App() {
         <Route path="/doctor/exam/:appointmentId" element={<DoctorExam />} />
         <Route path="patients" element={<DoctorPatients />} />
         <Route path="patient/:patientId" element={<PatientDetail />} />
+        <Route path="prescriptions" element={<DoctorPrescriptions />} />
 
           {/* Các route quản lý khác nếu có */}
         </Route>
