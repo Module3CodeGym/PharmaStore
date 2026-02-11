@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import App from "../../../../../../FE_Project26/project/src/App";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Appointment = () => {
   const [formData, setFormData] = useState({
@@ -29,8 +30,15 @@ const Appointment = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert("Đặt lịch thành công!");
-    console.log(formData);
+    toast.success("Đặt lịch thành công!", {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: true,
+        theme: "light",
+    });
   };
 
   return (
@@ -163,6 +171,7 @@ const Appointment = () => {
         </form>
       </div>
     </div>
+    
   );
 };
 

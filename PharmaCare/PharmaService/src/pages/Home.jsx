@@ -85,6 +85,46 @@ const Home = () => {
       discount: "-9%" 
     },
   ];
+  // 4. DỮ LIỆU BÁC SĨ THEO CHUYÊN NGÀNH
+  const doctors = [
+    {
+      id: 1,
+      name: "BS. Trần Văn A",
+      specialty: "Nội tổng quát",
+      experience: "10 năm kinh nghiệm",
+      rating: 4.8,
+      reviews: 124,
+      img: "https://cdn-icons-png.flaticon.com/512/3774/3774299.png"
+    },
+    {
+      id: 2,
+      name: "BS. Nguyễn Thị B",
+      specialty: "Da liễu",
+      experience: "8 năm kinh nghiệm",
+      rating: 4.6,
+      reviews: 98,
+      img: "https://cdn-icons-png.flaticon.com/512/3774/3774299.png"
+    },
+    {
+      id: 3,
+      name: "BS. Lê Văn C",
+      specialty: "Tim mạch",
+      experience: "12 năm kinh nghiệm",
+      rating: 4.9,
+      reviews: 210,
+      img: "https://cdn-icons-png.flaticon.com/512/3774/3774299.png"
+    },
+    {
+      id: 4,
+      name: "BS. Phạm Thị D",
+      specialty: "Nhi khoa",
+      experience: "7 năm kinh nghiệm",
+      rating: 4.7,
+      reviews: 76,
+      img: "https://cdn-icons-png.flaticon.com/512/3774/3774299.png"
+    }
+  ];
+
 
   // 3. SỬA HÀM XỬ LÝ (Dùng Toast thay Alert)
   const handleAddToCart = (e, product) => {
@@ -114,6 +154,27 @@ const Home = () => {
 
   const handleImageError = (e) => {
     e.target.src = "https://via.placeholder.com/300?text=Sản+Phẩm"; 
+  };
+    // Render sao đánh giá
+  const renderStars = (rating) => {
+    const fullStars = Math.floor(rating);
+    const totalStars = 5;
+
+    return (
+      <div style={{ display: "flex", justifyContent: "center", gap: "3px" }}>
+        {[...Array(totalStars)].map((_, index) => (
+          <span
+            key={index}
+            style={{
+              color: index < fullStars ? "#ffc107" : "#e4e5e9",
+              fontSize: "16px"
+            }}
+          >
+            ★
+          </span>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -314,6 +375,140 @@ const Home = () => {
           </div>
         </div>
       </section>
+    {/* SECTION: BÁC SĨ THEO CHUYÊN NGÀNH */}
+      <section style={{ padding: '70px 20px', background: '#f8f9fa' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: '50px' 
+          }}>
+            <h2 style={{ 
+              borderLeft: '5px solid #007bff', 
+              paddingLeft: '15px',
+              fontSize: '28px'
+            }}>
+              Đội Ngũ Bác Sĩ 👨‍⚕️
+            </h2>
+
+            <Link 
+              to="/appointment" 
+              style={{ 
+                color: '#007bff', 
+                fontWeight: 'bold', 
+                textDecoration: 'none' 
+              }}
+            >
+              Đặt lịch ngay →
+            </Link>
+          </div>
+
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(4, 1fr)', 
+            gap: '30px' 
+          }}>
+
+            {doctors.map(doctor => (
+              <div key={doctor.id}
+                style={{
+                  background: '#ffffff',
+                  padding: '30px 20px',
+                  borderRadius: '20px',
+                  textAlign: 'center',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.06)',
+                  transition: '0.3s',
+                  position: 'relative',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.boxShadow = '0 15px 35px rgba(0,0,0,0.1)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.06)';
+                }}
+              >
+
+                {/* Badge Online */}
+                <span style={{
+                  position: 'absolute',
+                  top: '15px',
+                  right: '15px',
+                  background: '#28c76f',
+                  color: 'white',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  fontSize: '12px'
+                }}>
+                  Online
+                </span>
+
+                <img
+                  src={doctor.img}
+                  alt={doctor.name}
+                  style={{
+                    width: '110px',
+                    height: '110px',
+                    borderRadius: '50%',
+                    marginBottom: '15px',
+                    objectFit: 'cover',
+                    border: '4px solid #f1f1f1'
+                  }}
+                />
+
+                <h4 style={{ marginBottom: '6px', fontWeight: '600' }}>
+                  {doctor.name}
+                </h4>
+
+                <p style={{ 
+                  color: '#007bff', 
+                  fontWeight: '600',
+                  marginBottom: '8px'
+                }}>
+                  {doctor.specialty}
+                </p>
+
+                {/* Rating */}
+                <div style={{ marginBottom: '8px' }}>
+                  {renderStars(doctor.rating)}
+                  <div style={{ fontSize: '13px', color: '#666' }}>
+                    {doctor.rating} ({doctor.reviews} đánh giá)
+                  </div>
+                </div>
+
+                <p style={{ 
+                  fontSize: '14px', 
+                  color: '#777', 
+                  marginBottom: '18px' 
+                }}>
+                  {doctor.experience}
+                </p>
+
+                <Link to="/appointment" style={{ textDecoration: 'none' }}>
+                  <button style={{
+                    padding: '10px 25px',
+                    background: 'linear-gradient(45deg,#007bff,#00b894)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: '0.3s'
+                  }}>
+                    Đặt lịch ngay
+                  </button>
+                </Link>
+
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
 
     </main>
   );
