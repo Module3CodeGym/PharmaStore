@@ -1,15 +1,20 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
 
 const Home = () => {
+  const navigate = useNavigate();
+
   // 1. Dữ liệu ảo cho danh mục (Icon/Category)
   const categories = [
-    { id: 1, name: "Thuốc kê đơn", icon: "💊", color: "#e3f2fd" },
-    { id: 2, name: "Thực phẩm chức năng", icon: "🌿", color: "#e8f5e9" },
-    { id: 3, name: "Dược mỹ phẩm", icon: "🧴", color: "#fff3e0" },
-    { id: 4, name: "Thiết bị y tế", icon: "🌡️", color: "#fce4ec" },
-    { id: 5, name: "Chăm sóc cá nhân", icon: "🪥", color: "#f3e5f5" },
-    { id: 6, name: "Sản phẩm cho bé", icon: "🍼", color: "#fffde7" },
-  ];
+  { id: 1, name: "Thuốc & Dược phẩm", icon: "💊", color: "#e3f2fd" },
+  { id: 2, name: "Thực phẩm chức năng", icon: "🌿", color: "#e8f5e9" },
+  { id: 3, name: "Dược mỹ phẩm", icon: "🧴", color: "#fff3e0" },
+  { id: 4, name: "Thiết bị y tế", icon: "🌡️", color: "#fce4ec" },
+  { id: 5, name: "Chăm sóc cá nhân", icon: "🪥", color: "#f3e5f5" },
+  { id: 6, name: "Sản phẩm cho bé", icon: "🍼", color: "#fffde7" },
+];
+
 
   // 2. Dữ liệu ảo cho sản phẩm bán chạy (8 sản phẩm)
   const bestSellers = [
@@ -142,18 +147,31 @@ const Home = () => {
         <h2 style={{ textAlign: 'center', marginBottom: '40px' }}>Danh Mục Sản Phẩm</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '20px' }}>
           {categories.map(cat => (
-            <div key={cat.id} className="cat-card" style={{ 
-              background: cat.color, 
-              padding: '25px 15px', 
-              borderRadius: '20px', 
-              textAlign: 'center',
-              cursor: 'pointer',
-              transition: 'transform 0.3s'
-            }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>{cat.icon}</div>
-              <h4 style={{ fontSize: '0.9rem' }}>{cat.name}</h4>
-            </div>
-          ))}
+  <div
+    key={cat.id}
+    onClick={() =>
+      navigate("/products", {
+        state: { category: cat.name }
+      })
+    }
+    style={{
+      background: cat.color,
+      padding: '25px 15px',
+      borderRadius: '20px',
+      textAlign: 'center',
+      cursor: 'pointer',
+      transition: 'all 0.3s'
+    }}
+    onMouseEnter={e => e.currentTarget.style.transform = "translateY(-5px)"}
+    onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
+  >
+    <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>
+      {cat.icon}
+    </div>
+    <h4 style={{ fontSize: '0.9rem' }}>{cat.name}</h4>
+  </div>
+))}
+
         </div>
       </section>
 
