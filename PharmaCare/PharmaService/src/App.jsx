@@ -42,6 +42,10 @@ import UserChat from "./pages/User/Chat/UserChat";
 import DoctorChat from "./pages/Doctor/Chat"; 
 import DoctorDashboard from "./pages/Doctor/DoctorDashboard";
 import DoctorProfile from "./pages/Doctor/Profile";
+
+import Appointment from "./pages/Exam/Appointment";
+import DoctorSchedule from "./pages/Doctor/DoctorSchedule";
+
 // --- 2. Layout Chính (Cho khách mua hàng) ---
 const MainLayout = () => {
   return (
@@ -65,6 +69,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/appointment" element={<Appointment />} />
 
       {/* --- NHÓM 2: KHÁCH HÀNG (MainLayout) --- */}
       <Route path="/" element={<MainLayout />}>
@@ -97,8 +102,9 @@ function App() {
         {/* Các route mở rộng sau này */}
         {/* <Route path="products" element={<ProductManagement />} /> */}
         {/* <Route path="orders" element={<OrderManagement />} /> */}
-      
+        <Route path="schedule" element={<DoctorSchedule />} />
       </Route>
+
 
     </Routes>
     </CartProvider>

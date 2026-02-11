@@ -145,32 +145,67 @@ const Home = () => {
       </style>
       
       {/* SECTION 1: HERO BANNER */}
-      <section style={{ width: '100%', background: 'linear-gradient(135deg, #a5c9f3 0%, #dae9f9 100%)', padding: '60px 20px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '50px' }}>
+      <section 
+        style={{ 
+          width: '100%',
+          backgroundImage: "url('https://suckhoedoisong.qltns.mediacdn.vn/thumb_w/640/324455921873985536/2024/1/1/truong-hop-bac-si-duoc-quyen-tu-choi-kham-benh-1704096961139471832464.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          position: 'relative',
+          padding: '80px 20px'
+        }}
+      >
+        {/* Overlay trắng mờ */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(255, 255, 255, 0.56)'
+        }}></div>
+
+        <div style={{ 
+          position: 'relative',
+          zIndex: 2,
+          maxWidth: '1200px', 
+          margin: '0 auto', 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          gap: '50px' 
+        }}>
           
           <div style={{ flex: '1 1 500px', textAlign: 'left' }}>
-            <span style={{ background: '#007bff', color: 'white', padding: '5px 15px', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 'bold' }}>TIÊU CHUẨN GPP QUỐC TẾ</span>
+            <span style={{ background: '#007bff', color: 'white', padding: '5px 15px', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+              TIÊU CHUẨN GPP QUỐC TẾ
+            </span>
+
             <h1 style={{ fontSize: '3.5rem', fontWeight: '900', color: '#1a3a5a', margin: '20px 0', lineHeight: '1.2' }}>
               Chăm sóc <span style={{ color: '#007bff' }}>sức khỏe</span> <br/> toàn diện cho bạn
             </h1>
+
             <p style={{ fontSize: '1.2rem', color: '#5a7184', marginBottom: '30px' }}>
               PharmaCare đồng hành cùng gia đình bạn với đội ngũ dược sĩ chuyên môn cao và sản phẩm chính hãng 100%.
             </p>
+
             <div style={{ display: 'flex', gap: '15px' }}>
-              <Link to="/products" style={{ textDecoration: 'none' }}>
-                <button style={{ padding: '15px 40px', background: '#007bff', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 10px 20px rgba(0, 123, 255, 0.2)' }}>KHÁM PHÁ NGAY</button>
+              <Link to="/Appointment" style={{ textDecoration: 'none' }}>
+                <button style={{ 
+                  padding: '15px 40px', 
+                  background: '#007bff', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '8px', 
+                  fontWeight: 'bold', 
+                  cursor: 'pointer', 
+                  boxShadow: '0 10px 20px rgba(0, 123, 255, 0.2)' 
+                }}>
+                  ĐẶT LỊCH NGAY
+                </button>
               </Link>
             </div>
           </div>
 
-          <div style={{ flex: '1 1 400px', display: 'flex', justifyContent: 'center' }}>
-            <img 
-              src="/images/bacsi.jpg" 
-              alt="Bác sĩ" 
-              style={{ width: '100%', maxWidth: '450px', height: 'auto', objectFit: 'contain' }}
-              onError={(e) => { e.target.src = "https://via.placeholder.com/500x400?text=Ảnh+Bác+Sĩ"; }}
-            />
-          </div>
         </div>
       </section>
 
