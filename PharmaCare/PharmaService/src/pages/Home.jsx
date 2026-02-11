@@ -154,7 +154,7 @@ const Home = () => {
               Chăm sóc <span style={{ color: '#007bff' }}>sức khỏe</span> <br/> toàn diện cho bạn
             </h1>
             <p style={{ fontSize: '1.2rem', color: '#5a7184', marginBottom: '30px' }}>
-              PharmaCare đồng hành cùng gia đình bạn với đội ngũ dược sĩ chuyên môn cao và sản phẩm chính hãng 100%.
+              PharmaStore đồng hành cùng gia đình bạn với đội ngũ dược sĩ chuyên môn cao và sản phẩm chính hãng 100%.
             </p>
             <div style={{ display: 'flex', gap: '15px' }}>
               <Link to="/products" style={{ textDecoration: 'none' }}>

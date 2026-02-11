@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { auth, db } from '../../../firebaseConfig'; 
 import { 
   collection, query, orderBy, onSnapshot, 
-  addDoc, serverTimestamp, setDoc, doc, updateDoc 
+  addDoc, serverTimestamp, setDoc, doc 
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { sendNotification } from '../../../services/notificationService'; // Nếu bạn muốn bắn thông báo cho bác sĩ
-import './UserChat.css'; // File CSS riêng cho đẹp
+import './UserChat.css';
 
 const UserChat = () => {
   const [user, setUser] = useState(null);
@@ -14,10 +13,9 @@ const UserChat = () => {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   
-  // Ref để tự cuộn xuống cuối
-  const messagesEndRef = useRef(null);
+  // --- 1. SỬA: Dùng Ref trỏ vào khung body thay vì div rỗng ---
+  const chatBodyRef = useRef(null); 
 
-  // 1. Lấy thông tin User
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -26,15 +24,10 @@ const UserChat = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. Lắng nghe tin nhắn Realtime
   useEffect(() => {
     if (!user) return;
-
-    // ID cuộc trò chuyện = "chat_" + UID của user
     const conversationId = `chat_${user.uid}`;
     const messagesRef = collection(db, "chats", conversationId, "messages");
-    
-    // Sắp xếp tin nhắn theo thời gian tăng dần (cũ trên, mới dưới)
     const q = query(messagesRef, orderBy("createdAt", "asc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -44,32 +37,32 @@ const UserChat = () => {
       }));
       setMessages(msgs);
       setLoading(false);
-      scrollToBottom();
     });
 
     return () => unsubscribe();
   }, [user]);
 
-  // Hàm cuộn xuống cuối
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // --- 2. SỬA: Hàm cuộn chỉ tác động vào khung chat ---
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (chatBodyRef.current) {
+      // Cách này chỉ cuộn nội dung bên trong div, không kéo cả trang xuống
+      chatBodyRef.current.scrollTo({
+        top: chatBodyRef.current.scrollHeight,
+        behavior: "smooth" // Cuộn mượt
+      });
+    }
+  }, [messages]); // Chạy mỗi khi có tin nhắn mới
 
-  // 3. Gửi tin nhắn
   const handleSend = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
 
-    const conversationId = `chat_${user.uid}`;
     const textToSend = newMessage;
-    setNewMessage(""); // Xóa ô nhập ngay lập tức cho mượt
-
+    setNewMessage(""); // Xóa ô nhập liệu ngay lập tức
+    
+    // ... (Code gửi tin nhắn giữ nguyên như cũ) ...
+    const conversationId = `chat_${user.uid}`;
     try {
-      // A. Lưu tin nhắn vào sub-collection
       await addDoc(collection(db, "chats", conversationId, "messages"), {
         text: textToSend,
         senderId: user.uid,
@@ -78,41 +71,26 @@ const UserChat = () => {
         isRead: false
       });
 
-      // B. Cập nhật thông tin đoạn chat cha (để Bác sĩ thấy tin mới nhất ở list bên trái)
       const chatDocRef = doc(db, "chats", conversationId);
-      
-      const chatInfo = {
+      await setDoc(chatDocRef, {
         lastMessage: textToSend,
         updatedAt: serverTimestamp(),
         userId: user.uid,
         userName: user.displayName || user.email,
         userAvatar: user.photoURL || "",
-        isReadByDoctor: false // Đánh dấu để bác sĩ thấy chưa đọc
-      };
-
-      // Dùng setDoc với merge: true để tạo nếu chưa có, cập nhật nếu đã có
-      await setDoc(chatDocRef, chatInfo, { merge: true });
-
-      // C. (Tùy chọn) Gửi thông báo cho bác sĩ (nếu đã tích hợp Notification Service)
-      // await sendNotification('message', `Tin nhắn từ ${user.displayName}`, textToSend, '/doctor/chat');
+        isReadByDoctor: false
+      }, { merge: true });
 
     } catch (error) {
       console.error("Lỗi gửi tin nhắn:", error);
     }
   };
 
-  // --- GIAO DIỆN ---
-  if (loading) {
-    return <div className="chat-loading">Đang tải cuộc trò chuyện...</div>;
-  }
-
-  if (!user) {
-    return <div className="chat-require-login">Vui lòng đăng nhập để chat với bác sĩ.</div>;
-  }
+  if (loading) return <div className="chat-loading">Đang tải...</div>;
+  if (!user) return <div className="chat-require-login">Vui lòng đăng nhập.</div>;
 
   return (
     <div className="user-chat-page">
-      {/* Header Chat */}
       <div className="chat-header">
         <div className="doctor-info">
           <div className="doctor-avatar">
@@ -126,11 +104,10 @@ const UserChat = () => {
         </div>
       </div>
 
-      {/* Danh sách tin nhắn */}
-      <div className="chat-body">
+      {/* --- 3. SỬA: Gắn Ref vào đây --- */}
+      <div className="chat-body" ref={chatBodyRef}>
         {messages.length === 0 ? (
           <div className="empty-chat">
-            <img src="https://cdn-icons-png.flaticon.com/512/2665/2665448.png" alt="Chat" />
             <p>Hãy đặt câu hỏi, bác sĩ sẽ trả lời bạn sớm nhất!</p>
           </div>
         ) : (
@@ -151,10 +128,9 @@ const UserChat = () => {
             );
           })
         )}
-        <div ref={messagesEndRef} />
+        {/* Đã XÓA cái div <div ref={messagesEndRef} /> vì không cần nữa */}
       </div>
 
-      {/* Input gửi tin */}
       <form className="chat-footer" onSubmit={handleSend}>
         <input 
           type="text" 

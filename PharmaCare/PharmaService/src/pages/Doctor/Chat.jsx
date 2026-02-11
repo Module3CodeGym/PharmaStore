@@ -1,114 +1,177 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { auth } from '../../firebaseConfig'; 
-import { listenToChatList, listenToMessages, sendMessage } from '../../services/chatService';
+import { db, auth } from '../../firebaseConfig'; 
+import { 
+  collection, query, orderBy, onSnapshot, 
+  addDoc, serverTimestamp, doc, updateDoc, where 
+} from 'firebase/firestore';
+import './Chat.css';
 
 const DoctorChat = () => {
   const [chats, setChats] = useState([]); // Danh sách người cần tư vấn
-  const [selectedChat, setSelectedChat] = useState(null); // Người đang chọn để chat
-  const [messages, setMessages] = useState([]); // Nội dung chat chi tiết
-  const [replyText, setReplyText] = useState(""); // Nội dung trả lời
+  const [selectedChat, setSelectedChat] = useState(null); // Cuộc trò chuyện đang chọn
+  const [messages, setMessages] = useState([]); // Tin nhắn chi tiết
+  const [newMessage, setNewMessage] = useState("");
   
   const messagesEndRef = useRef(null);
 
-  // 1. Lấy danh sách tất cả các cuộc hội thoại
+  // --- 1. LẤY DANH SÁCH CHAT (SIDEBAR) ---
   useEffect(() => {
-    const unsubscribe = listenToChatList((data) => {
-      setChats(data);
+    // Sắp xếp theo 'updatedAt' giảm dần (desc) -> Tin mới nhất lên đầu
+    const q = query(collection(db, "chats"), orderBy("updatedAt", "desc"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const chatList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setChats(chatList);
     });
+
     return () => unsubscribe();
   }, []);
 
-  // 2. Khi bấm chọn 1 người -> Lấy nội dung tin nhắn của người đó
+  // --- 2. LẤY TIN NHẮN CỦA CHAT ĐANG CHỌN ---
   useEffect(() => {
-    if (selectedChat) {
-      const unsubscribe = listenToMessages(selectedChat.id, (data) => {
-        setMessages(data);
-        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-      });
-      return () => unsubscribe();
+    if (!selectedChat) return;
+
+    // Đánh dấu đã đọc khi bác sĩ bấm vào xem (nếu chưa đọc)
+    if (!selectedChat.isReadByDoctor) {
+      const chatRef = doc(db, "chats", selectedChat.id);
+      // Chỉ update trên Firebase, state local sẽ tự update nhờ onSnapshot ở trên
+      updateDoc(chatRef, { isReadByDoctor: true }).catch(err => console.error(err));
     }
-  }, [selectedChat]);
 
-  // 3. Gửi tin nhắn trả lời
-  const handleReply = async (e) => {
-    e.preventDefault();
-    if (!replyText.trim() || !selectedChat) return;
+    const messagesRef = collection(db, "chats", selectedChat.id, "messages");
+    // Tin nhắn cũ ở trên, mới ở dưới (asc)
+    const q = query(messagesRef, orderBy("createdAt", "asc"));
 
-    const doctorId = auth.currentUser?.uid || "doctor_id_tam_thoi"; // Lấy UID bác sĩ
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setMessages(msgs);
+      scrollToBottom();
+    });
 
-    // Gửi tin nhắn (senderId là bác sĩ)
-    await sendMessage(selectedChat.id, doctorId, replyText, null);
+    return () => unsubscribe();
+  }, [selectedChat]); // Chạy lại khi đổi chat khác
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // --- 3. HÀM XỬ LÝ THỜI GIAN (Fix lỗi hiển thị) ---
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '...'; // Đang gửi...
     
-    setReplyText("");
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    // Nếu là Firestore Timestamp (có seconds)
+    if (timestamp.seconds) {
+      return new Date(timestamp.seconds * 1000).toLocaleTimeString('vi-VN', {
+        hour: '2-digit', 
+        minute:'2-digit'
+      });
+    }
+    // Nếu là Date object thường (fallback)
+    return new Date(timestamp).toLocaleTimeString('vi-VN', {
+      hour: '2-digit', 
+      minute:'2-digit'
+    });
+  };
+
+  // --- 4. GỬI TIN NHẮN ---
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !selectedChat) return;
+
+    const textToSend = newMessage;
+    setNewMessage(""); // Xóa ô nhập ngay
+
+    try {
+      // A. Thêm tin nhắn vào sub-collection
+      await addDoc(collection(db, "chats", selectedChat.id, "messages"), {
+        text: textToSend,
+        senderId: "DOCTOR", // Hoặc auth.currentUser.uid
+        createdAt: serverTimestamp(),
+        isRead: false
+      });
+
+      // B. Cập nhật trạng thái ra ngoài (Để nhảy lên đầu list)
+      const chatRef = doc(db, "chats", selectedChat.id);
+      await updateDoc(chatRef, {
+        lastMessage: textToSend,
+        updatedAt: serverTimestamp(), // QUAN TRỌNG: Cập nhật giờ để sort
+        isReadByDoctor: true // Bác sĩ nhắn thì đương nhiên đã đọc
+      });
+
+    } catch (error) {
+      console.error("Lỗi gửi tin:", error);
+    }
   };
 
   return (
-    <div className="container-fluid p-0" style={{ height: '90vh', display: 'flex', background: '#f8f9fa' }}>
+    <div className="doctor-chat-container">
       
-      {/* --- CỘT TRÁI: DANH SÁCH KHÁCH HÀNG --- */}
-      <div style={{ width: '350px', background: 'white', borderRight: '1px solid #ddd', overflowY: 'auto' }}>
-        <div className="p-3 bg-primary text-white font-weight-bold">
-          <i className="fas fa-user-md"></i> Danh sách tư vấn
+      {/* --- SIDEBAR TRÁI: DANH SÁCH --- */}
+      <div className="chat-sidebar">
+        <div className="sidebar-header">
+          <h3>Tư vấn bệnh nhân</h3>
         </div>
-        
-        {chats.map(chat => (
-          <div 
-            key={chat.id} 
-            onClick={() => setSelectedChat(chat)}
-            style={{ 
-              padding: '15px', 
-              borderBottom: '1px solid #eee', 
-              cursor: 'pointer',
-              background: selectedChat?.id === chat.id ? '#e3f2fd' : 'white',
-              transition: '0.2s'
-            }}
-          >
-            <div style={{ fontWeight: 'bold', color: '#333' }}>
-              {chat.userInfo?.displayName || "Khách ẩn danh"}
+        <div className="chat-list">
+          {chats.map(chat => (
+            <div 
+              key={chat.id} 
+              className={`chat-item ${selectedChat?.id === chat.id ? 'active' : ''}`}
+              onClick={() => setSelectedChat(chat)}
+            >
+              <img 
+                src={chat.userAvatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} 
+                alt="User" 
+                className="chat-avatar"
+              />
+              <div className="chat-info">
+                <div className="chat-name-row">
+                  {/* Nếu chưa đọc: Tên in đậm (class unread-name) */}
+                  <span className={`chat-name ${!chat.isReadByDoctor ? 'unread-name' : ''}`}>
+                    {chat.userName || "Khách hàng"}
+                  </span>
+                  <span className="chat-time">{formatTime(chat.updatedAt)}</span>
+                </div>
+                
+                <div className="chat-preview-row">
+                  {/* Nếu chưa đọc: Nội dung in đậm (class bold-text) */}
+                  <p className={`chat-preview ${!chat.isReadByDoctor ? 'bold-text' : ''}`}>
+                    {/* Thêm icon phong bì nếu chưa đọc */}
+                    {!chat.isReadByDoctor && "📩 "} 
+                    {chat.lastMessage}
+                  </p>
+                  
+                  {/* Nếu chưa đọc: Hiện chấm đỏ */}
+                  {!chat.isReadByDoctor && <span className="unread-dot"></span>}
+                </div>
+              </div>
             </div>
-            <div style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {/* Nếu tin nhắn chưa đọc thì tô đậm (ví dụ) */}
-              {chat.lastMessage}
-            </div>
-            <small style={{ color: '#999', fontSize: '0.8rem' }}>
-                {chat.lastMessageTime?.seconds ? new Date(chat.lastMessageTime.seconds * 1000).toLocaleTimeString() : ''}
-            </small>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {/* --- CỘT PHẢI: KHUNG CHAT --- */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {/* --- KHUNG CHAT PHẢI --- */}
+      <div className="chat-main">
         {selectedChat ? (
           <>
-            {/* Header tên khách */}
-            <div className="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
-              <strong>Đang chat với: <span className="text-primary">{selectedChat.userInfo?.displayName}</span></strong>
-              <button className="btn btn-sm btn-outline-secondary" onClick={() => setSelectedChat(null)}>Đóng</button>
+            <div className="chat-main-header">
+              <img src={selectedChat.userAvatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt="Avatar" />
+              <h4>{selectedChat.userName}</h4>
             </div>
 
-            {/* Nội dung tin nhắn */}
-            <div style={{ flex: 1, padding: '20px', overflowY: 'auto', background: '#f0f2f5' }}>
-              {messages.map((msg) => {
-                // Kiểm tra xem tin nhắn này là của Bác sĩ (chính mình) hay Khách
-                const isDoctor = msg.senderId === auth.currentUser?.uid; 
-                
+            <div className="chat-messages">
+              {messages.map(msg => {
+                const isMe = msg.senderId === "DOCTOR" || msg.senderId === auth.currentUser?.uid;
                 return (
-                  <div key={msg.id} style={{ 
-                    display: 'flex', 
-                    justifyContent: isDoctor ? 'flex-end' : 'flex-start',
-                    marginBottom: '10px'
-                  }}>
-                    <div style={{ 
-                      padding: '10px 15px', 
-                      borderRadius: '15px',
-                      background: isDoctor ? '#007bff' : 'white', // Bác sĩ màu xanh, Khách màu trắng
-                      color: isDoctor ? 'white' : '#333',
-                      maxWidth: '70%',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                    }}>
+                  <div key={msg.id} className={`message-row ${isMe ? 'doctor-msg' : 'user-msg'}`}>
+                    <div className="message-bubble">
                       {msg.text}
+                      <span className="msg-time">{formatTime(msg.createdAt)}</span>
                     </div>
                   </div>
                 );
@@ -116,27 +179,23 @@ const DoctorChat = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Ô nhập liệu */}
-            <form onSubmit={handleReply} className="p-3 bg-white border-top d-flex gap-2">
+            <form className="chat-input-area" onSubmit={handleSend}>
               <input 
                 type="text" 
-                className="form-control"
-                placeholder="Nhập câu trả lời..." 
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
+                placeholder="Nhập tin nhắn..." 
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
               />
-              <button type="submit" className="btn btn-primary px-4"><i className="fas fa-paper-plane"></i></button>
+              <button type="submit"><i className="fas fa-paper-plane"></i></button>
             </form>
           </>
         ) : (
-          // Màn hình chờ khi chưa chọn ai
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', flexDirection: 'column' }}>
-            <i className="fas fa-comments" style={{ fontSize: '4rem', marginBottom: '20px', color: '#ddd' }}></i>
-            <h4>Chọn một khách hàng để bắt đầu tư vấn</h4>
+          <div className="no-chat-selected">
+            <i className="fas fa-comments" style={{fontSize: '50px', color: '#ccc'}}></i>
+            <p>Chọn một bệnh nhân để bắt đầu tư vấn</p>
           </div>
         )}
       </div>
-
     </div>
   );
 };

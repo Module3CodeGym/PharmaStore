@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../../../firebaseConfig';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { toast } from 'react-toastify'; // Nếu dự án có cài toastify, nếu không có thể dùng alert
+import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const Profile = () => {
@@ -58,6 +58,7 @@ const Profile = () => {
       setOriginalData(data); // Lưu bản backup
     } catch (error) {
       console.error("Lỗi lấy hồ sơ:", error);
+      toast.error("Không thể tải thông tin hồ sơ.");
     } finally {
       setLoading(false);
     }
@@ -75,7 +76,7 @@ const Profile = () => {
 
     // Validate cơ bản
     if (!formData.name || !formData.phone || !formData.address) {
-      alert("Vui lòng điền đầy đủ Họ tên, SĐT và Địa chỉ!");
+      toast.warning("Vui lòng điền đầy đủ Họ tên, SĐT và Địa chỉ!");
       return;
     }
 
@@ -93,10 +94,10 @@ const Profile = () => {
 
       setOriginalData(formData); // Cập nhật lại bản backup
       setIsEditing(false);
-      alert("Cập nhật hồ sơ thành công!"); // Có thể thay bằng toast.success
+      toast.success("Cập nhật hồ sơ thành công!");
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
-      alert("Có lỗi xảy ra, vui lòng thử lại!");
+      toast.error("Có lỗi xảy ra khi cập nhật hồ sơ!");
     }
   };
 
@@ -113,19 +114,21 @@ const Profile = () => {
   }
 
   return (
-    <div className="container mt-4 mb-5">
-      <div className="card shadow-sm" style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div className="container mt-4 mb-5" style={{ minHeight: '60vh' }}>
+      <ToastContainer />
+      <div className="card shadow-sm" style={{ maxWidth: '800px', margin: '0 auto', borderRadius: '15px', overflow: 'hidden' }}>
         
         {/* Header */}
-        <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-          <h4 className="mb-0 text-primary">
-            <i className="fas fa-user-circle me-2"></i> Hồ sơ khách hàng
+        <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center" style={{ borderBottom: '2px solid #f0f2f5' }}>
+          <h4 className="mb-0" style={{ color: '#00b894' }}>
+            <i className="fas fa-user-circle me-2"></i> Hồ sơ cá nhân
           </h4>
           <div>
             {!isEditing ? (
               <button 
                 className="btn btn-outline-primary btn-sm"
                 onClick={() => setIsEditing(true)}
+                style={{ borderRadius: '20px', padding: '5px 15px' }}
               >
                 <i className="fas fa-pencil-alt me-1"></i> Chỉnh sửa
               </button>
@@ -133,6 +136,7 @@ const Profile = () => {
               <button 
                 className="btn btn-outline-secondary btn-sm"
                 onClick={handleCancel}
+                style={{ borderRadius: '20px', padding: '5px 15px' }}
               >
                 <i className="fas fa-times me-1"></i> Hủy bỏ
               </button>
@@ -146,55 +150,58 @@ const Profile = () => {
             
             {/* Họ và tên */}
             <div className="col-md-6">
-              <label className="form-label fw-bold">Họ và tên:</label>
+              <label className="form-label fw-bold">Họ và tên <span className="text-danger">*</span></label>
               <input
                 type="text"
-                className={`form-control ${isEditing ? '' : 'bg-light'}`}
+                className={`form-control ${!isEditing ? 'bg-light border-0' : ''}`}
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
                 disabled={!isEditing}
                 placeholder="Nhập họ và tên"
+                style={{ padding: '10px' }}
               />
             </div>
 
             {/* Email (Luôn disable) */}
             <div className="col-md-6">
-              <label className="form-label fw-bold">Email:</label>
+              <label className="form-label fw-bold">Email</label>
               <input
                 type="email"
-                className="form-control bg-light"
+                className="form-control bg-light border-0"
                 value={formData.email}
                 disabled
+                style={{ padding: '10px' }}
               />
-              <small className="text-muted fst-italic">* Email đăng nhập không thể thay đổi</small>
             </div>
 
             {/* Số điện thoại */}
             <div className="col-md-6">
-              <label className="form-label fw-bold">Số điện thoại:</label>
+              <label className="form-label fw-bold">Số điện thoại <span className="text-danger">*</span></label>
               <input
                 type="text"
-                className={`form-control ${isEditing ? '' : 'bg-light'}`}
+                className={`form-control ${!isEditing ? 'bg-light border-0' : ''}`}
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
                 disabled={!isEditing}
                 placeholder="Nhập số điện thoại"
+                style={{ padding: '10px' }}
               />
             </div>
 
             {/* Địa chỉ */}
             <div className="col-12">
-              <label className="form-label fw-bold">Địa chỉ nhận hàng:</label>
+              <label className="form-label fw-bold">Địa chỉ nhận hàng <span className="text-danger">*</span></label>
               <textarea
-                className={`form-control ${isEditing ? '' : 'bg-light'}`}
+                className={`form-control ${!isEditing ? 'bg-light border-0' : ''}`}
                 name="address"
                 rows="3"
                 value={formData.address}
                 onChange={handleChange}
                 disabled={!isEditing}
                 placeholder="Nhập địa chỉ chi tiết (Số nhà, đường, phường/xã...)"
+                style={{ padding: '10px' }}
               ></textarea>
             </div>
 
@@ -204,12 +211,14 @@ const Profile = () => {
                 <button 
                   className="btn btn-secondary me-2"
                   onClick={handleCancel}
+                  style={{ borderRadius: '8px', padding: '10px 20px' }}
                 >
                   Hủy bỏ
                 </button>
                 <button 
                   className="btn btn-primary"
                   onClick={handleSave}
+                  style={{ borderRadius: '8px', padding: '10px 20px', background: '#00b894', border: 'none' }}
                 >
                   <i className="fas fa-save me-1"></i> Lưu thay đổi
                 </button>
