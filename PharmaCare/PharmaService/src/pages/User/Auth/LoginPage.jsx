@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Form, Button, Alert } from 'react-bootstrap';
 import "./login.css";
-import { auth, db, googleProvider } from '../../../firebaseConfig'; // Đảm bảo đường dẫn đúng
+import { auth, db, googleProvider } from '../../../firebaseConfig'; 
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
-// import loginImg from '../../assets/loginImg.png'; 
 import googleIcon from '../../../assets/google.png';
 import facebookIcon from '../../../assets/facebook.png';
+// import loginImg from '../../assets/loginImg.png'; 
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -17,26 +17,38 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // --- HÀM KIỂM TRA ROLE VÀ ĐIỀU HƯỚNG ---
   const checkRoleAndRedirect = async (uid) => {
     try {
       const userDoc = await getDoc(doc(db, "users", uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
         
+        // 1. Admin
         if (userData.role === 'admin') {
-          navigate('/admin'); // Admin vào Dashboard quản lý
-        } else if (userData.role === 'doctor') {
-          // Nếu là bác sĩ, kiểm tra đã được duyệt chưa
+          navigate('/admin'); 
+        } 
+        // 2. Bác sĩ
+        else if (userData.role === 'doctor') {
           if (userData.isVerified) {
             navigate('/doctor');
           } else {
-             navigate('/waiting-approval'); // Chưa duyệt thì vào trang chờ
+            navigate('/waiting-approval'); 
           }
-        } else {
-          navigate('/'); // Khách hàng về trang chủ
+        } 
+        // 3. Dược sĩ (MỚI THÊM)
+        else if (userData.role === 'pharmacist') {
+          // Có thể thêm kiểm tra isVerified nếu cần thiết giống bác sĩ
+          navigate('/pharmacist/dashboard'); 
         }
+        // 4. Khách hàng thường
+        else {
+          navigate('/'); 
+        }
+
       } else {
-        // Trường hợp đăng nhập Google lần đầu chưa có trong DB (xử lý sau)
+        // User đăng nhập Google lần đầu chưa có trong DB
+        // Có thể navigate về trang bổ sung thông tin hoặc trang chủ
         navigate('/'); 
       }
     } catch (err) {
@@ -72,9 +84,10 @@ const LoginPage = () => {
   return (
     <div className="login-wrapper">
       <Container className="login-container shadow-lg">
-        <Row>
-          {/* --- CỘT TRÁI: FORM --- */}
-          <Col md={6} className="login-form-section ">
+        <Row className="justify-content-center"> 
+          {/* Căn giữa nếu bỏ cột ảnh, hoặc giữ nguyên bố cục tùy bạn */}
+          
+          <Col md={6} className="login-form-section">
             <h5 className="text-muted mb-2">Welcome back!</h5>
             <h2 className="fw-bold mb-4">Log In</h2>
             
@@ -134,25 +147,25 @@ const LoginPage = () => {
               Don't have an account yet? <Link to="/register" className="fw-bold" style={{color: '#6a11cb'}}>Sign up</Link>
             </div>
 
-            {/* Link dành riêng cho Bác sĩ như trong thiết kế */}
-            <div className="text-center mt-3">
-              <small>Bạn là Bác sĩ? <Link to="/doctor/login" className="text-primary">Đăng nhập chuyên gia</Link></small>
+            {/* Dòng link phụ cho nhân viên y tế */}
+            <div className="text-center mt-3 pt-3 border-top">
+               <small className="text-muted d-block mb-1">Dành cho nhân viên y tế:</small>
+               <div className="d-flex justify-content-center gap-3">
+                  <Link to="/doctor/login" className="text-primary text-decoration-none fw-bold">
+                    <i className="fas fa-user-md"></i> Bác sĩ
+                  </Link>
+                  <span className="text-muted">|</span>
+                  <Link to="/pharmacist/login" className="text-success text-decoration-none fw-bold">
+                    <i className="fas fa-pills"></i> Dược sĩ
+                  </Link>
+               </div>
             </div>
-          </Col>
 
-          {/* <Col md={6} className="d-none d-md-block p-0">
-           <Col md={6} className="d-none d-md-block login-img-col">
-            <img 
-              src={loginImg} 
-              alt="Login Banner" 
-              className="img-fluid h-100 w-100" 
-              style={{objectFit: 'cover', borderTopRightRadius: '15px', borderBottomRightRadius: '15px'}} 
-            />
-            </Col>
-          </Col> */}
+          </Col>
         </Row>
       </Container>
     </div>
   );
 };
+
 export default LoginPage;

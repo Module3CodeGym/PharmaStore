@@ -7,7 +7,7 @@ import { doc, getDoc } from 'firebase/firestore';
 // Import các thành phần chung
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
-import UserChatWidget from '../../components/UserChatWidget';
+// import UserChatWidget from '../../components/UserChatWidget'; // Có thể bỏ nếu đã có trong MainLayout hoặc muốn hiện ở mọi nơi
 
 import './UserLayout.css';
 
@@ -19,7 +19,6 @@ const UserLayout = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        // Lấy thêm thông tin từ Firestore nếu cần
         const docRef = doc(db, "users", currentUser.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -28,7 +27,6 @@ const UserLayout = () => {
           setUser(currentUser);
         }
       } else {
-        // Nếu chưa đăng nhập mà cố vào trang này -> Đá về Login
         navigate('/login');
       }
     });
@@ -40,7 +38,7 @@ const UserLayout = () => {
     navigate('/login');
   };
 
-  if (!user) return null; // Hoặc loading spinner
+  if (!user) return null;
 
   return (
     <div className="user-layout-wrapper">
@@ -70,6 +68,12 @@ const UserLayout = () => {
               <NavLink to="/profile" className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}>
                 <i className="fas fa-user-circle"></i> Hồ sơ cá nhân
               </NavLink>
+
+              {/* --- ĐƯỜNG DẪN MỚI THÊM VÀO ĐÂY --- */}
+              <NavLink to="/MyHealth" className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}>
+                <i className="fas fa-file-medical-alt"></i> Hồ sơ sức khỏe
+              </NavLink>
+              {/* ---------------------------------- */}
               
               <NavLink to="/orders" className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}>
                 <i className="fas fa-box-open"></i> Đơn mua

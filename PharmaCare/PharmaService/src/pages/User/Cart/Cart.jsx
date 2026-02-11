@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../../../context/CartContext'; // 1. Dùng Context thay vì utils
+import { useCart } from '../../../context/CartContext'; 
 import { auth, db } from '../../../firebaseConfig'; 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'; 
 import { onAuthStateChanged } from 'firebase/auth';
-import './Cart.css'; // File CSS cho đẹp
+import './Cart.css'; // Đảm bảo file CSS này đã tồn tại
 
 const Cart = () => {
-  const { cartItems, removeFromCart, clearCart } = useCart();
+  // Lấy hàm updateQuantity từ Context
+  const { cartItems, removeFromCart, updateQuantity, clearCart } = useCart();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const Cart = () => {
         userId: user.uid,
         userName: user.displayName || user.email,
         userEmail: user.email,
-        items: cartItems, // Lưu danh sách thuốc
+        items: cartItems, // Lưu danh sách thuốc kèm số lượng và giá tại thời điểm mua
         totalAmount: totalPrice,
         status: 'pending', // Trạng thái: Chờ xử lý
         createdAt: serverTimestamp(), // Lấy giờ server
@@ -69,10 +70,15 @@ const Cart = () => {
     }
   };
 
+  // Giao diện khi giỏ hàng trống
   if (cartItems.length === 0) {
     return (
       <div className="empty-cart-container">
-        <img src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" alt="Empty" />
+        <img 
+          src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" 
+          alt="Empty" 
+          style={{ width: '150px', marginBottom: '20px' }} 
+        />
         <p>Giỏ hàng của bạn đang trống</p>
         <button onClick={() => navigate('/products')} className="btn-continue">
           Tiếp tục mua sắm
@@ -88,10 +94,10 @@ const Cart = () => {
       <div className="cart-content">
         {/* --- DANH SÁCH SẢN PHẨM --- */}
         <div className="cart-list">
-          <table>
+          <table className="table">
             <thead>
               <tr>
-                <th>Sản phẩm</th>
+                <th style={{ width: '40%' }}>Sản phẩm</th>
                 <th>Đơn giá</th>
                 <th>Số lượng</th>
                 <th>Thành tiền</th>
@@ -102,21 +108,56 @@ const Cart = () => {
               {cartItems.map((item) => (
                 <tr key={item.id}>
                   <td className="product-col">
-                    <img src={item.img} alt={item.name} onError={(e) => e.target.src="https://via.placeholder.com/50"} />
-                    <div>
-                      <strong>{item.name}</strong>
+                    <div className="d-flex align-items-center">
+                      <img 
+                        src={item.img} 
+                        alt={item.name} 
+                        style={{ width: '60px', height: '60px', objectFit: 'cover', marginRight: '15px', borderRadius: '8px' }}
+                        onError={(e) => e.target.src="https://via.placeholder.com/60"} 
+                      />
+                      <div>
+                        <strong style={{ fontSize: '1.1rem' }}>{item.name}</strong>
+                      </div>
                     </div>
                   </td>
-                  <td>{formatPrice(item.price)}</td>
-                  <td>
-                    <span className="qty-badge">x{item.quantity}</span>
+                  
+                  <td style={{ verticalAlign: 'middle' }}>{formatPrice(item.price)}</td>
+                  
+                  {/* Cột Số Lượng có nút Tăng/Giảm */}
+                  <td style={{ verticalAlign: 'middle' }}>
+                    <div className="qty-control d-flex align-items-center">
+                      <button 
+                        className="btn btn-sm btn-outline-secondary"
+                        style={{ width: '30px', height: '30px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={() => updateQuantity(item.id, -1)}
+                        disabled={item.quantity <= 1} // Vô hiệu hóa nút giảm nếu số lượng là 1
+                      >
+                        -
+                      </button>
+                      
+                      <span className="mx-3 fw-bold">{item.quantity}</span>
+                      
+                      <button 
+                        className="btn btn-sm btn-outline-secondary"
+                        style={{ width: '30px', height: '30px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={() => updateQuantity(item.id, 1)}
+                      >
+                        +
+                      </button>
+                    </div>
                   </td>
-                  <td className="subtotal">
+
+                  <td className="subtotal" style={{ verticalAlign: 'middle', fontWeight: 'bold', color: '#2c3e50' }}>
                     {formatPrice(item.price * item.quantity)}
                   </td>
-                  <td>
-                    <button className="btn-remove" onClick={() => removeFromCart(item.id)}>
-                      <i className="fas fa-trash"></i>
+                  
+                  <td style={{ verticalAlign: 'middle' }}>
+                    <button 
+                      className="btn-remove btn btn-danger btn-sm" 
+                      onClick={() => removeFromCart(item.id)}
+                      title="Xóa khỏi giỏ"
+                    >
+                      <i className="fas fa-trash"></i> Xóa
                     </button>
                   </td>
                 </tr>
@@ -134,18 +175,19 @@ const Cart = () => {
           </div>
           <div className="summary-row">
             <span>Phí vận chuyển:</span>
-            <span className="free-ship">Miễn phí</span>
+            <span className="free-ship" style={{ color: '#27ae60', fontWeight: 'bold' }}>Miễn phí</span>
           </div>
           <hr />
           <div className="summary-row total">
             <span>Thành tiền:</span>
-            <span>{formatPrice(totalPrice)}</span>
+            <span style={{ color: '#d35400', fontSize: '1.5rem' }}>{formatPrice(totalPrice)}</span>
           </div>
 
           <button 
             className="btn-checkout" 
             onClick={handleCheckout} 
             disabled={loading}
+            style={{ width: '100%', padding: '15px', marginTop: '20px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
           >
             {loading ? "Đang xử lý..." : "Tiến hành đặt hàng"}
           </button>
