@@ -2,44 +2,77 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebaseConfig'; 
 import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { useCart } from '../context/CartContext'; // 1. Import useCart
+import { doc, getDoc, collection, query, where, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
+import { useCart } from '../context/CartContext';
 
 const Header = () => { 
   const [user, setUser] = useState(null);
   const [displayName, setDisplayName] = useState("Khách hàng");
   const [showDropdown, setShowDropdown] = useState(false);
+  
+  // --- LOGIC THÔNG BÁO ---
+  const [notifications, setNotifications] = useState([]);
+  const [showNotify, setShowNotify] = useState(false);
+  
   const navigate = useNavigate();
-
-  // 2. Lấy số lượng sản phẩm từ Context
   const { totalItems } = useCart(); 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+        
+        // 1. Lấy tên hiển thị
         try {
           const docRef = doc(db, "users", currentUser.uid);
           const docSnap = await getDoc(docRef);
-
           if (docSnap.exists() && docSnap.data().displayName) {
             setDisplayName(docSnap.data().displayName);
-          } else if (currentUser.displayName) {
-            setDisplayName(currentUser.displayName);
-          } else if (currentUser.email) {
-            setDisplayName(currentUser.email.split('@')[0]);
+          } else {
+            setDisplayName(currentUser.displayName || currentUser.email.split('@')[0]);
           }
         } catch (error) {
           console.error("Lỗi lấy tên:", error);
-          setDisplayName(currentUser.displayName || currentUser.email.split('@')[0]);
         }
+
+        // 2. LẮNG NGHE THÔNG BÁO THỜI GIAN THỰC
+        const q = query(
+          collection(db, "notifications"),
+          where("userId", "==", currentUser.uid),
+          orderBy("createdAt", "desc")
+        );
+
+        const unsubscribeNotify = onSnapshot(q, (snapshot) => {
+          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setNotifications(data);
+        });
+
+        return () => unsubscribeNotify();
       } else {
         setUser(null);
         setDisplayName("Khách hàng");
+        setNotifications([]);
       }
     });
     return () => unsubscribe();
   }, []);
+
+  // Đếm số thông báo chưa đọc
+  const unreadNotifyCount = notifications.filter(n => !n.isRead).length;
+
+  // Đánh dấu tất cả là đã đọc khi mở chuông
+  const handleToggleNotify = async () => {
+    setShowNotify(!showNotify);
+    setShowDropdown(false); // Đóng dropdown user nếu đang mở
+    
+    if (!showNotify && unreadNotifyCount > 0) {
+      const batch = writeBatch(db);
+      notifications.filter(n => !n.isRead).forEach((n) => {
+        batch.update(doc(db, "notifications", n.id), { isRead: true });
+      });
+      await batch.commit();
+    }
+  };
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -48,180 +81,122 @@ const Header = () => {
   };
 
   return (
-    <header style={{ 
-      backgroundColor: 'white', 
-      boxShadow: '0 2px 10px rgba(0,0,0,0.05)', 
-      position: 'sticky', 
-      top: 0, 
-      zIndex: 1000,
-      height: '70px',
-      display: 'flex',
-      alignItems: 'center'
-    }}>
-      <div style={{ 
-        width: '100%',
-        maxWidth: '1200px', 
-        margin: '0 auto', 
-        padding: '0 20px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        gap: '20px'
-      }}>
+    <header style={headerStyle}>
+      <div style={containerStyle}>
         
         {/* LOGO */}
-        <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          <div style={{ fontSize: '2rem', color: '#00b894' }}>
-             <i className="fas fa-clinic-medical"></i>
-          </div>
-          <span className="brand-name" style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#00b894' }}>PharmaStore</span>
+        <Link to="/" style={logoStyle}>
+          <div style={{ fontSize: '2rem', color: '#00b894' }}><i className="fas fa-clinic-medical"></i></div>
+          <span className="brand-name" style={brandNameStyle}>PharmaStore</span>
         </Link>
 
         {/* THANH TÌM KIẾM */}
-        <div style={{ 
-          flex: 1, 
-          maxWidth: '500px', 
-          display: 'flex',
-          alignItems: 'center',
-          backgroundColor: '#f1f2f6', 
-          borderRadius: '30px',      
-          border: '1px solid #e1e1e1',
-          height: '45px',
-          overflow: 'hidden'         
-        }}>
-          <input 
-            type="text" 
-            placeholder="Tìm thuốc, TPCN..." 
-            style={{ 
-              flex: 1, 
-              border: 'none', 
-              outline: 'none', 
-              background: 'transparent',
-              padding: '0 20px',
-              fontSize: '0.95rem',
-              color: '#333',
-              height: '100%'
-            }} 
-          />
-          <button style={{ 
-            background: '#00b894', 
-            border: 'none', 
-            width: '60px',
-            height: '100%',
-            color: 'white', 
-            cursor: 'pointer',
-            fontSize: '1.1rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <i className="fas fa-search"></i>
-          </button>
+        <div style={searchBoxStyle}>
+          <input type="text" placeholder="Tìm thuốc, TPCN..." style={inputStyle} />
+          <button style={searchBtnStyle}><i className="fas fa-search"></i></button>
         </div>
 
-        {/* KHU VỰC TÀI KHOẢN */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexShrink: 0 }}>
+        {/* KHU VỰC ACTION */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexShrink: 0 }}>
           
-          <Link to="/upload-prescription" style={{ textDecoration: 'none', color: '#555', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '500', fontSize: '0.9rem' }}>
+          <Link to="/upload-prescription" style={uploadLinkStyle}>
             <i className="fas fa-file-upload"></i> <span className="hide-on-mobile">Gửi đơn</span>
           </Link>
 
-          {user ? (
-            <div 
-              style={{ position: 'relative', cursor: 'pointer' }}
-              onClick={() => setShowDropdown(!showDropdown)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', borderRadius: '20px', transition: '0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f8f9fa'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-                <img 
-                   src={user.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} 
-                   alt="Avatar" 
-                   style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #eee' }}
-                   onError={(e) => e.target.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                />
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
-                  <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#333', maxWidth: '100px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {displayName}
-                  </span>
-                </div>
-                <i className="fas fa-caret-down" style={{ fontSize: '0.8rem', color: '#999' }}></i>
+          {/* CHUÔNG THÔNG BÁO */}
+          {user && (
+            <div style={{ position: 'relative' }}>
+              <div 
+                onClick={handleToggleNotify}
+                style={{ fontSize: '1.3rem', color: '#2d3436', cursor: 'pointer', padding: '5px' }}
+              >
+                <i className="fas fa-bell"></i>
+                {unreadNotifyCount > 0 && (
+                  <span style={badgeStyle}>{unreadNotifyCount}</span>
+                )}
               </div>
 
-              {showDropdown && (
-                <div style={{
-                  position: 'absolute',
-                  top: '45px',
-                  right: 0,
-                  width: '180px',
-                  background: 'white',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-                  borderRadius: '8px',
-                  padding: '10px 0',
-                  border: '1px solid #eee',
-                  zIndex: 2000
-                }}>
-                  <Link to="/profile" style={{ display: 'block', padding: '10px 20px', textDecoration: 'none', color: '#333', fontSize: '0.9rem' }}>
-                    <i className="fas fa-user-circle" style={{ width: '20px' }}></i> Hồ sơ của tôi
-                  </Link>
-                  <Link to="/orders" style={{ display: 'block', padding: '10px 20px', textDecoration: 'none', color: '#333', fontSize: '0.9rem' }}>
-                    <i className="fas fa-box" style={{ width: '20px' }}></i> Đơn mua
-                  </Link>
-                  <div style={{ borderTop: '1px solid #eee', margin: '5px 0' }}></div>
-                  <div 
-                    onClick={handleLogout}
-                    style={{ padding: '10px 20px', color: '#d63031', cursor: 'pointer', fontSize: '0.9rem' }}
-                  >
-                    <i className="fas fa-sign-out-alt" style={{ width: '20px' }}></i> Đăng xuất
+              {/* Dropdown Thông báo */}
+              {showNotify && (
+                <div style={notifyDropdownStyle}>
+                  <div style={{ padding: '12px 15px', borderBottom: '1px solid #eee', fontWeight: 'bold', fontSize: '0.9rem' }}>Thông báo</div>
+                  <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '20px', textAlign: 'center', color: '#999', fontSize: '0.85rem' }}>Không có thông báo nào</div>
+                    ) : (
+                      notifications.map(n => (
+                        <div key={n.id} style={{ ...notifyItemStyle, backgroundColor: n.isRead ? 'white' : '#f0faff' }}>
+                          <div style={{ fontSize: '0.85rem', color: '#333' }}>{n.message}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px' }}>
+                             {n.createdAt?.toDate().toLocaleString('vi-VN')}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}
             </div>
+          )}
+
+          {/* TÀI KHOẢN */}
+          {user ? (
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => { setShowDropdown(!showDropdown); setShowNotify(false); }}>
+              <div style={userBoxStyle}>
+                <img 
+                   src={user.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} 
+                   alt="Avatar" style={avatarStyle}
+                />
+                <span className="hide-on-mobile" style={userNameStyle}>{displayName}</span>
+                <i className="fas fa-caret-down" style={{ fontSize: '0.8rem', color: '#999' }}></i>
+              </div>
+
+              {showDropdown && (
+                <div style={userDropdownStyle}>
+                  <Link to="/profile" style={dropdownLinkStyle}><i className="fas fa-user-circle"></i> Hồ sơ</Link>
+                  <Link to="/orders" style={dropdownLinkStyle}><i className="fas fa-box"></i> Đơn mua</Link>
+                  <div style={{ borderTop: '1px solid #eee', margin: '5px 0' }}></div>
+                  <div onClick={handleLogout} style={{ ...dropdownLinkStyle, color: '#d63031' }}><i className="fas fa-sign-out-alt"></i> Đăng xuất</div>
+                </div>
+              )}
+            </div>
           ) : (
-             <div style={{ display: 'flex', gap: '10px' }}>
-               <Link to="/login" style={{ textDecoration: 'none', fontWeight: '600', color: '#00b894', padding: '8px 15px', border: '1px solid #00b894', borderRadius: '20px' }}>
-                 Đăng nhập
-               </Link>
-               <Link to="/register" style={{ textDecoration: 'none', fontWeight: '600', color: 'white', background: '#00b894', padding: '8px 15px', borderRadius: '20px' }}>
-                 Đăng ký
-               </Link>
+             <div style={{ display: 'flex', gap: '8px' }}>
+               <Link to="/login" style={loginBtnStyle}>Đăng nhập</Link>
              </div>
           )}
 
-          {/* 3. Giỏ hàng hiển thị số lượng thật */}
-          <Link to="/cart" style={{ textDecoration: 'none', color: '#333', position: 'relative', marginLeft: '5px' }}>
-             <div style={{ fontSize: '1.4rem', color: '#2d3436' }}><i className="fas fa-shopping-cart"></i></div>
-             
-             {/* Chỉ hiện nếu totalItems > 0 */}
-             {totalItems > 0 && (
-               <span style={{ 
-                 position: 'absolute', 
-                 top: '-8px', 
-                 right: '-8px', 
-                 background: '#ff4757', 
-                 color: 'white', 
-                 fontSize: '0.7rem', 
-                 padding: '2px 6px', 
-                 borderRadius: '10px',
-                 fontWeight: 'bold',
-                 border: '2px solid white'
-               }}>
-                 {totalItems}
-               </span>
-             )}
+          {/* GIỎ HÀNG */}
+          <Link to="/cart" style={{ textDecoration: 'none', position: 'relative' }}>
+              <div style={{ fontSize: '1.3rem', color: '#2d3436' }}><i className="fas fa-shopping-cart"></i></div>
+              {totalItems > 0 && <span style={badgeStyle}>{totalItems}</span>}
           </Link>
 
         </div>
       </div>
 
-      <style>
-        {`
-          @media (max-width: 768px) {
-            .brand-name { display: none; }
-            .hide-on-mobile { display: none; }
-          }
-        `}
-      </style>
+      <style>{`@media (max-width: 768px) { .brand-name, .hide-on-mobile { display: none; } }`}</style>
     </header>
   );
 };
+
+// --- STYLES ---
+const headerStyle = { backgroundColor: 'white', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 1000, height: '70px', display: 'flex', alignItems: 'center' };
+const containerStyle = { width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px' };
+const logoStyle = { textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 };
+const brandNameStyle = { fontSize: '1.3rem', fontWeight: 'bold', color: '#00b894' };
+const searchBoxStyle = { flex: 1, maxWidth: '400px', display: 'flex', alignItems: 'center', backgroundColor: '#f1f2f6', borderRadius: '30px', border: '1px solid #e1e1e1', height: '40px', overflow: 'hidden' };
+const inputStyle = { flex: 1, border: 'none', outline: 'none', background: 'transparent', padding: '0 15px', fontSize: '0.9rem' };
+const searchBtnStyle = { background: '#00b894', border: 'none', width: '50px', height: '100%', color: 'white', cursor: 'pointer' };
+const badgeStyle = { position: 'absolute', top: '-5px', right: '-8px', background: '#ff4757', color: 'white', fontSize: '0.65rem', padding: '2px 5px', borderRadius: '10px', fontWeight: 'bold', border: '2px solid white' };
+const uploadLinkStyle = { textDecoration: 'none', color: '#555', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '500', fontSize: '0.85rem' };
+const userBoxStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '5px' };
+const avatarStyle = { width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover' };
+const userNameStyle = { fontWeight: 'bold', fontSize: '0.85rem', color: '#333', maxWidth: '80px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const notifyDropdownStyle = { position: 'absolute', top: '45px', right: '-50px', width: '280px', background: 'white', boxShadow: '0 5px 25px rgba(0,0,0,0.15)', borderRadius: '12px', zIndex: 3000, border: '1px solid #eee' };
+const notifyItemStyle = { padding: '12px 15px', borderBottom: '1px solid #f8f9fa', cursor: 'default' };
+const userDropdownStyle = { position: 'absolute', top: '45px', right: 0, width: '160px', background: 'white', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', borderRadius: '8px', padding: '8px 0', border: '1px solid #eee', zIndex: 3000 };
+const dropdownLinkStyle = { display: 'block', padding: '8px 15px', textDecoration: 'none', color: '#333', fontSize: '0.85rem' };
+const loginBtnStyle = { textDecoration: 'none', fontWeight: '600', color: '#00b894', padding: '6px 12px', border: '1px solid #00b894', borderRadius: '20px', fontSize: '0.85rem' };
 
 export default Header;

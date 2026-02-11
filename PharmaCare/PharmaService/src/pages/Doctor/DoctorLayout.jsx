@@ -125,7 +125,7 @@ const DoctorLayout = () => {
           <NavLink to="/doctor" end className={({isActive}) => isActive ? "menu-item active" : "menu-item"}>
             <i className="fas fa-home"></i><span>Dashboard</span>
           </NavLink>
-          <NavLink to="/doctor/appointments" className={({isActive}) => isActive ? "menu-item active" : "menu-item"}>
+          <NavLink to="/doctor/schedule" className={({isActive}) => isActive ? "menu-item active" : "menu-item"}>
             <i className="far fa-calendar-alt"></i><span>Lịch khám</span>
           </NavLink>
           <NavLink to="/doctor/patients" className={({isActive}) => isActive ? "menu-item active" : "menu-item"}>
