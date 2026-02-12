@@ -81,6 +81,15 @@ const OrderDetail = () => {
               <p className="mb-1">Tên: {order.userName}</p>
               <p className="mb-1">Email: {order.userEmail}</p>
               <p className="mb-1">Phương thức thanh toán: <strong>{order.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng (COD)' : order.paymentMethod}</strong></p>
+              <p className="btn btn-primary"
+                  onClick={() => {
+                    window.location.href =
+                      "https://buy.stripe.com/test_00w00iabI1Xda7takSdnW00";
+                  }}
+                >
+                  Thanh toán bằng thẻ
+                </p>
+
             </div>
             <div className="col-md-6 text-md-end">
               <h6 className="fw-bold">Trạng thái đơn hàng:</h6>
