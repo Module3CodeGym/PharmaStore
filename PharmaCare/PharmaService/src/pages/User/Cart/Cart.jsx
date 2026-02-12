@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext'; 
-import { auth, db } from '../../../firebaseConfig'; 
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'; 
+import { auth } from '../../../firebaseConfig'; 
 import { onAuthStateChanged } from 'firebase/auth';
-import './Cart.css'; // Đảm bảo file CSS này đã tồn tại
+import './Cart.css'; 
 
 const Cart = () => {
-  // Lấy hàm updateQuantity từ Context
-  const { cartItems, removeFromCart, updateQuantity, clearCart } = useCart();
+  // Lấy các hàm xử lý từ Context
+  const { cartItems, removeFromCart, updateQuantity } = useCart();
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   // Kiểm tra đăng nhập
@@ -29,45 +27,15 @@ const Cart = () => {
   // Tính tổng tiền
   const totalPrice = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
-  // Xử lý Thanh toán
-  const handleCheckout = async () => {
+  // --- HÀM MỚI: CHUYỂN HƯỚNG SANG TRANG THANH TOÁN ---
+  const handleProceedToCheckout = () => {
     if (!user) {
       alert("Vui lòng đăng nhập để thanh toán!");
       navigate('/login');
       return;
     }
-
-    if (cartItems.length === 0) return;
-
-    setLoading(true);
-    try {
-      // 1. Tạo đơn hàng lưu lên Firestore
-      const orderData = {
-        userId: user.uid,
-        userName: user.displayName || user.email,
-        userEmail: user.email,
-        items: cartItems, // Lưu danh sách thuốc kèm số lượng và giá tại thời điểm mua
-        totalAmount: totalPrice,
-        status: 'pending', // Trạng thái: Chờ xử lý
-        createdAt: serverTimestamp(), // Lấy giờ server
-        paymentMethod: 'COD' // Mặc định tiền mặt
-      };
-
-      await addDoc(collection(db, "orders"), orderData);
-
-      // 2. Xóa sạch giỏ hàng sau khi mua
-      clearCart();
-
-      // 3. Thông báo và chuyển hướng
-      alert("Đặt hàng thành công! Bác sĩ sẽ sớm liên hệ xác nhận.");
-      navigate('/orders'); // Chuyển sang trang Lịch sử đơn hàng
-
-    } catch (error) {
-      console.error("Lỗi thanh toán:", error);
-      alert("Có lỗi xảy ra, vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
+    // Chuyển sang trang Checkout để điền thông tin giao hàng
+    navigate('/checkout');
   };
 
   // Giao diện khi giỏ hàng trống
@@ -123,14 +91,14 @@ const Cart = () => {
                   
                   <td style={{ verticalAlign: 'middle' }}>{formatPrice(item.price)}</td>
                   
-                  {/* Cột Số Lượng có nút Tăng/Giảm */}
+                  {/* Cột Số Lượng */}
                   <td style={{ verticalAlign: 'middle' }}>
                     <div className="qty-control d-flex align-items-center">
                       <button 
                         className="btn btn-sm btn-outline-secondary"
                         style={{ width: '30px', height: '30px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onClick={() => updateQuantity(item.id, -1)}
-                        disabled={item.quantity <= 1} // Vô hiệu hóa nút giảm nếu số lượng là 1
+                        disabled={item.quantity <= 1} 
                       >
                         -
                       </button>
@@ -166,7 +134,7 @@ const Cart = () => {
           </table>
         </div>
 
-        {/* --- TỔNG TIỀN & THANH TOÁN --- */}
+        {/* --- TỔNG TIỀN & NÚT ĐI TIẾP --- */}
         <div className="cart-summary">
           <h3>Tổng cộng</h3>
           <div className="summary-row">
@@ -185,11 +153,10 @@ const Cart = () => {
 
           <button 
             className="btn-checkout" 
-            onClick={handleCheckout} 
-            disabled={loading}
-            style={{ width: '100%', padding: '15px', marginTop: '20px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
+            onClick={handleProceedToCheckout} 
+            style={{ width: '100%', padding: '15px', marginTop: '20px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}
           >
-            {loading ? "Đang xử lý..." : "Tiến hành đặt hàng"}
+            Tiến hành thanh toán &rarr;
           </button>
         </div>
       </div>

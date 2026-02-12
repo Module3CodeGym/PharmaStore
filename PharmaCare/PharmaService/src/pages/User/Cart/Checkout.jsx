@@ -143,11 +143,6 @@ const Checkout = () => {
                 <input className="form-check-input" type="radio" name="pay" id="bank" checked={paymentMethod === 'BANKING'} onChange={() => setPaymentMethod('BANKING')} />
                 <label className="form-check-label" htmlFor="bank">Chuyển khoản ngân hàng</label>
               </div>
-              {paymentMethod === 'BANKING' && (
-                <div className="alert alert-info mt-2">
-                  <small>Vui lòng CK tới STK: <b>123456789 (MB Bank)</b>. Nội dung: <b>SDT_DatHang</b></small>
-                </div>
-              )}
             </div>
           </div>
         </div>

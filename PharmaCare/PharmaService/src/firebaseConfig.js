@@ -3,7 +3,6 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; 
 
-// Đã xác thực config dựa trên ảnh "image_8a6de0.png" của bạn
 const firebaseConfig = {
   apiKey: "AIzaSyC9gicwFgOve0r9RilQVi_YtGfi3Ph9GfU",
   authDomain: "project-535c6.firebaseapp.com",

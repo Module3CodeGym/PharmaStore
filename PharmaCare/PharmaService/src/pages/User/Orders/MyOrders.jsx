@@ -8,9 +8,18 @@ const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [activeTab, setActiveTab] = useState('ALL'); // 1. Thêm State quản lý Tab
   const navigate = useNavigate();
 
-  // 1. Kiểm tra đăng nhập và lấy userId
+  // 2. Danh sách các Tab
+  const TABS = [
+    { id: 'ALL', label: 'Tất cả' },
+    { id: 'pending', label: 'Chờ xác nhận' },
+    { id: 'confirmed', label: 'Vận chuyển' },
+    { id: 'completed', label: 'Hoàn thành' },
+    { id: 'cancelled', label: 'Đã hủy' },
+  ];
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
@@ -24,10 +33,8 @@ const MyOrders = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. Hàm lấy danh sách đơn hàng từ Firebase
   const fetchOrders = async (userId) => {
     try {
-      // Lấy đơn hàng của user đó, sắp xếp mới nhất lên đầu
       const q = query(
         collection(db, "orders"),
         where("userId", "==", userId),
@@ -48,28 +55,37 @@ const MyOrders = () => {
     }
   };
 
-  // Helper: Format tiền tệ
+  // 3. Logic lọc đơn hàng theo Tab đang chọn
+  const filteredOrders = orders.filter(order => {
+    if (activeTab === 'ALL') return true;
+    if (activeTab === 'confirmed') return ['confirmed', 'shipping'].includes(order.status);
+    return order.status === activeTab;
+  });
+
   const formatPrice = (amount) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
   };
 
-  // Helper: Format ngày tháng từ Firebase Timestamp
-  const formatDate = (timestamp) => {
-    if (!timestamp) return "";
-    // Nếu là Firestore Timestamp thì convert, nếu không thì dùng new Date
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleString('vi-VN');
+  // Helper lấy màu chữ trạng thái
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return '#f39c12'; // Cam
+      case 'confirmed': return '#3498db'; // Xanh dương
+      case 'shipping': return '#16a085'; // Xanh ngọc
+      case 'completed': return '#27ae60'; // Xanh lá
+      case 'cancelled': return '#e74c3c'; // Đỏ
+      default: return '#333';
+    }
   };
 
-  // Helper: Dịch trạng thái sang tiếng Việt
-  const getStatusLabel = (status) => {
+  const getStatusText = (status) => {
     switch (status) {
-      case 'pending': return <span className="badge bg-warning text-dark">Chờ xử lý</span>;
-      case 'confirmed': return <span className="badge bg-primary">Đã xác nhận</span>;
-      case 'shipping': return <span className="badge bg-info text-dark">Đang giao</span>;
-      case 'completed': return <span className="badge bg-success">Hoàn thành</span>;
-      case 'cancelled': return <span className="badge bg-danger">Đã hủy</span>;
-      default: return <span className="badge bg-secondary">{status}</span>;
+      case 'pending': return 'CHỜ XÁC NHẬN';
+      case 'confirmed': return 'ĐANG CHUẨN BỊ';
+      case 'shipping': return 'ĐANG GIAO HÀNG';
+      case 'completed': return 'HOÀN THÀNH';
+      case 'cancelled': return 'ĐÃ HỦY';
+      default: return status;
     }
   };
 
@@ -84,63 +100,97 @@ const MyOrders = () => {
     );
   }
 
-  if (orders.length === 0) {
-    return (
-      <div className="text-center mt-5">
-        <img src="https://cdn-icons-png.flaticon.com/512/4076/4076432.png" alt="No Orders" style={{width: '100px'}} />
-        <p className="mt-3">Bạn chưa có đơn hàng nào.</p>
-        <button className="btn btn-outline-primary" onClick={() => navigate('/products')}>Mua sắm ngay</button>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mt-4">
-      <h2 className="mb-4">Lịch sử đơn hàng của tôi</h2>
-      
-      <div className="d-flex flex-column gap-4">
-        {orders.map((order) => (
-          <div key={order.id} className="card shadow-sm border-0">
-            {/* Header đơn hàng */}
-            <div className="card-header bg-white d-flex justify-content-between align-items-center py-3">
-              <div>
-                <strong>Mã đơn: #{order.id.slice(0, 8)}...</strong>
-                <span className="text-muted ms-2" style={{fontSize: '0.9rem'}}>
-                  | {formatDate(order.createdAt)}
-                </span>
-              </div>
-              <div>{getStatusLabel(order.status)}</div>
-            </div>
+    <div className="container mt-4 mb-5" style={{ maxWidth: '900px' }}>
+      <h3 className="mb-4">Đơn mua</h3>
 
-            {/* Body: Danh sách sản phẩm */}
-            <div className="card-body">
-              {order.items && order.items.map((item, index) => (
-                <div key={index} className="d-flex align-items-center border-bottom py-3 last-no-border">
-                  <img 
-                    src={item.img || "https://via.placeholder.com/60"} 
-                    alt={item.name} 
-                    style={{width: '60px', height: '60px', objectFit: 'cover', borderRadius: '5px', marginRight: '15px'}}
-                  />
-                  <div className="flex-grow-1">
-                    <h6 className="mb-1">{item.name}</h6>
-                    <small className="text-muted">Đơn giá: {formatPrice(item.price)}</small>
-                  </div>
-                  <div className="text-end">
-                    <span className="d-block">x{item.quantity}</span>
-                    <strong className="text-primary">{formatPrice(item.price * item.quantity)}</strong>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Footer: Tổng tiền */}
-            <div className="card-footer bg-light d-flex justify-content-end align-items-center py-3">
-              <span className="me-2">Tổng tiền thanh toán:</span>
-              <h5 className="mb-0 text-danger fw-bold">{formatPrice(order.totalAmount)}</h5>
-            </div>
-          </div>
+      {/* 4. GIAO DIỆN THANH TAB (CSS Inline trực tiếp) */}
+      <div className="bg-white shadow-sm mb-3 d-flex sticky-top" style={{ overflowX: 'auto', borderBottom: '1px solid #eee', zIndex: 10 }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              flex: 1,
+              padding: '15px 10px',
+              border: 'none',
+              background: 'transparent',
+              whiteSpace: 'nowrap',
+              color: activeTab === tab.id ? '#ee4d2d' : '#555', // Màu cam khi active
+              borderBottom: activeTab === tab.id ? '2px solid #ee4d2d' : '2px solid transparent',
+              fontWeight: activeTab === tab.id ? '500' : 'normal',
+              cursor: 'pointer'
+            }}
+          >
+            {tab.label}
+          </button>
         ))}
       </div>
+
+      {/* 5. HIỂN THỊ DANH SÁCH ĐÃ LỌC (filteredOrders) */}
+      {filteredOrders.length === 0 ? (
+        <div className="text-center py-5 bg-white shadow-sm">
+          <img src="https://deo.shopeemobile.com/shopee/shopee-pcmall-live-sg/orderlist/5fafbb923393b712b964.png" alt="Empty" style={{width: '100px'}} />
+          <p className="mt-3 text-muted">Chưa có đơn hàng nào ở mục này</p>
+          <button className="btn btn-outline-primary" onClick={() => navigate('/products')}>Mua sắm ngay</button>
+        </div>
+      ) : (
+        <div className="d-flex flex-column gap-3">
+          {filteredOrders.map((order) => (
+            <div key={order.id} className="bg-white shadow-sm p-3 border rounded">
+              
+              {/* Header Card */}
+              <div className="d-flex justify-content-between border-bottom pb-2 mb-3">
+                <span className="fw-bold">PharmaStore</span>
+                <span style={{ color: getStatusColor(order.status), fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.9rem' }}>
+                  {getStatusText(order.status)}
+                </span>
+              </div>
+
+              {/* Body Card - Click vào xem chi tiết */}
+              <div style={{ cursor: 'pointer' }} onClick={() => navigate(`/orders/${order.id}`)}>
+                {order.items && order.items.map((item, index) => (
+                  <div key={index} className="d-flex mb-3">
+                    <img 
+                      src={item.img || "https://via.placeholder.com/80"} 
+                      alt={item.name} 
+                      style={{width: '80px', height: '80px', objectFit: 'cover', border: '1px solid #eee', borderRadius: '4px'}} 
+                    />
+                    <div className="ms-3 flex-grow-1">
+                      <h6 className="mb-1">{item.name}</h6>
+                      <small className="text-muted">x{item.quantity}</small>
+                      <div className="d-flex justify-content-between mt-1">
+                        <span></span>
+                        <span className="text-danger fw-bold">{formatPrice(item.price)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer Card */}
+              <div className="border-top pt-3 text-end">
+                <div className="mb-3">
+                  <span className="text-muted me-2">Thành tiền:</span>
+                  <span className="fs-5 fw-bold text-danger">{formatPrice(order.totalAmount)}</span>
+                </div>
+                
+                <div className="d-flex justify-content-end gap-2">
+                  <button className="btn btn-outline-secondary btn-sm" onClick={() => navigate(`/orders/${order.id}`)}>
+                    Xem chi tiết
+                  </button>
+                  
+                  {(order.status === 'completed' || order.status === 'cancelled') && (
+                    <button className="btn btn-primary btn-sm" onClick={() => navigate('/products')}>
+                      Mua lại
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

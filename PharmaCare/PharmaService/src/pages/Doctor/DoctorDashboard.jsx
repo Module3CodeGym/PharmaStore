@@ -1,192 +1,214 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom'; // 1. Import hook để chuyển trang
+import { useNavigate } from 'react-router-dom'; 
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   PieChart, Pie, Cell 
 } from 'recharts';
 
 const DoctorDashboard = () => {
-  const navigate = useNavigate(); // 2. Khai báo hook
+  const navigate = useNavigate();
 
-  // --- DỮ LIỆU MẪU (GIỮ NGUYÊN) ---
+  // --- DỮ LIỆU THỐNG KÊ (MẪU) ---
   const stats = [
-    { title: "Chờ tư vấn", value: "5", icon: "⏳", color: "#e17055", desc: "Cần xử lý ngay" },
-    { title: "Đang tư vấn", value: "3", icon: "💬", color: "#0984e3", desc: "Hội thoại đang mở" },
-    { title: "Đã xong hôm nay", value: "18", icon: "✅", color: "#00b894", desc: "Ca tư vấn hoàn tất" },
+    { title: "Chờ khám", value: "3", icon: "⏳", color: "#e17055", desc: "Bệnh nhân đang đợi" },
+    { title: "Đang tư vấn", value: "2", icon: "💬", color: "#0984e3", desc: "Cuộc hội thoại mở" },
+    { title: "Đã khám xong", value: "12", icon: "✅", color: "#00b894", desc: "Hoàn tất hôm nay" },
     { title: "Tổng bệnh nhân", value: "1,204", icon: "👥", color: "#6c5ce7", desc: "Lịch sử tiếp nhận" },
   ];
 
+  // Biểu đồ hoạt động khám bệnh
   const activityData = [
-    { name: 'Thứ 2', tu_van: 40, ke_don: 24 },
-    { name: 'Thứ 3', tu_van: 30, ke_don: 13 },
-    { name: 'Thứ 4', tu_van: 58, ke_don: 40 },
-    { name: 'Thứ 5', tu_van: 45, ke_don: 29 },
-    { name: 'Thứ 6', tu_van: 60, ke_don: 48 },
-    { name: 'Thứ 7', tu_van: 34, ke_don: 15 },
-    { name: 'CN', tu_van: 20, ke_don: 5 },
+    { name: 'Thứ 2', kham_benh: 20, tu_van: 40 },
+    { name: 'Thứ 3', kham_benh: 15, tu_van: 30 },
+    { name: 'Thứ 4', kham_benh: 25, tu_van: 58 },
+    { name: 'Thứ 5', kham_benh: 18, tu_van: 45 },
+    { name: 'Thứ 6', kham_benh: 30, tu_van: 60 },
+    { name: 'Thứ 7', kham_benh: 10, tu_van: 34 },
+    { name: 'CN', kham_benh: 5, tu_van: 20 },
   ];
 
+  // Biểu đồ kết quả chẩn đoán
   const outcomeData = [
-    { name: 'Chỉ tư vấn', value: 150 },
     { name: 'Kê đơn thuốc', value: 320 },
-    { name: 'Nhập viện', value: 30 },
+    { name: 'Tư vấn sức khỏe', value: 150 },
+    { name: 'Chuyển viện', value: 15 },
   ];
   
-  const COLORS = ['#0984e3', '#00b894', '#d63031'];
+  const COLORS = ['#00b894', '#0984e3', '#d63031'];
 
-  // --- STYLE CHO NÚT NHANH (HEADER) ---
+  // --- STYLE CHO CARD BUTTON ---
   const actionCardStyle = {
     flex: 1,
+    minWidth: '280px',
     background: 'white',
-    padding: '20px',
-    borderRadius: '12px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+    padding: '25px',
+    borderRadius: '16px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
     display: 'flex',
     alignItems: 'center',
-    gap: '15px',
+    gap: '20px',
     cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    border: '1px solid #eee'
+    transition: 'all 0.3s ease',
+    border: '1px solid #f1f2f6'
   };
 
   return (
-    <div className="doctor-container" style={{ padding: '20px', background: '#f4f6f9', minHeight: '100vh' }}>
+    <div className="doctor-container" style={{ padding: '30px', background: '#f8f9fa', minHeight: '100vh', fontFamily: "'Segoe UI', sans-serif" }}>
       
-      {/* 3. HEADER ĐIỀU HƯỚNG (QUICK ACTIONS) - PHẦN MỚI THÊM */}
-      <div style={{ marginBottom: '30px' }}>
-        <h2 style={{ marginBottom: '20px', color: '#2d3436' }}>👋 Xin chào, Bác sĩ!</h2>
+      {/* 1. HEADER & GREETING */}
+      <div style={{ marginBottom: '40px' }}>
+        <h2 style={{ marginBottom: '10px', color: '#2d3436', fontWeight: '700' }}>👋 Xin chào, Bác sĩ!</h2>
+        <p style={{ color: '#636e72' }}>Chúc bạn một ngày làm việc hiệu quả. Dưới đây là tổng quan công việc hôm nay.</p>
         
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+        {/* QUICK ACTIONS */}
+        <div style={{ display: 'flex', gap: '25px', flexWrap: 'wrap', marginTop: '30px' }}>
           
-          {/* Nút 1: Đi tới Chat */}
+          {/* Nút 1: Lịch khám (Chính) */}
           <div 
-            style={{ ...actionCardStyle, borderLeft: '5px solid #0984e3' }}
-            onClick={() => navigate('/doctor/chat')}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 5px 15px rgba(9, 132, 227, 0.2)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'; }}
+            style={{ ...actionCardStyle, borderLeft: '6px solid #e17055' }}
+            onClick={() => navigate('/doctor/appointments')} // Dẫn tới trang lịch khám
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 8px 25px rgba(225, 112, 85, 0.2)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)'; }}
           >
-            <div style={{ background: '#e3f2fd', padding: '15px', borderRadius: '50%', color: '#0984e3', fontSize: '1.5rem' }}>
+            <div style={{ background: '#ffefe6', padding: '18px', borderRadius: '50%', color: '#e17055', fontSize: '1.8rem' }}>
+              <i className="fas fa-calendar-check"></i>
+            </div>
+            <div>
+              <h4 style={{ margin: 0, color: '#2d3436', fontWeight: 'bold' }}>Lịch khám bệnh</h4>
+              <small style={{ color: '#636e72', fontSize: '0.9rem' }}>Xem danh sách bệnh nhân chờ</small>
+            </div>
+            <i className="fas fa-chevron-right" style={{ marginLeft: 'auto', color: '#b2bec3' }}></i>
+          </div>
+
+          {/* Nút 2: Tư vấn Chat */}
+          <div 
+            style={{ ...actionCardStyle, borderLeft: '6px solid #0984e3' }}
+            onClick={() => navigate('/doctor/chat')}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 8px 25px rgba(9, 132, 227, 0.2)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)'; }}
+          >
+            <div style={{ background: '#e3f2fd', padding: '18px', borderRadius: '50%', color: '#0984e3', fontSize: '1.8rem' }}>
               <i className="fas fa-comments"></i>
             </div>
             <div>
-              <h4 style={{ margin: 0, color: '#333' }}>Tư vấn ngay</h4>
-              <small style={{ color: '#666' }}>Mở danh sách tin nhắn</small>
+              <h4 style={{ margin: 0, color: '#2d3436', fontWeight: 'bold' }}>Tư vấn sức khỏe</h4>
+              <small style={{ color: '#636e72', fontSize: '0.9rem' }}>Trả lời tin nhắn bệnh nhân</small>
             </div>
-            <i className="fas fa-arrow-right" style={{ marginLeft: 'auto', color: '#ccc' }}></i>
+            <i className="fas fa-chevron-right" style={{ marginLeft: 'auto', color: '#b2bec3' }}></i>
           </div>
 
-          {/* Nút 2: Đi tới Kê đơn */}
-          <div 
-            style={{ ...actionCardStyle, borderLeft: '5px solid #00b894' }}
-            onClick={() => navigate('/doctor/prescribe')} // Đổi đường dẫn nếu trang kê đơn của bạn tên khác
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 5px 15px rgba(0, 184, 148, 0.2)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'; }}
+           {/* Nút 3: Bắt đầu khám (Thay thế cho Đơn hàng) */}
+           <div 
+            style={{ ...actionCardStyle, borderLeft: '6px solid #00b894' }}
+            onClick={() => navigate('/doctor/exams')}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 184, 148, 0.2)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)'; }}
           >
-            <div style={{ background: '#e0fcf6', padding: '15px', borderRadius: '50%', color: '#00b894', fontSize: '1.5rem' }}>
-              <i className="fas fa-file-prescription"></i>
+            <div style={{ background: '#e0fcf6', padding: '18px', borderRadius: '50%', color: '#00b894', fontSize: '1.8rem' }}>
+              <i className="fas fa-stethoscope"></i>
             </div>
             <div>
-              <h4 style={{ margin: 0, color: '#333' }}>Tạo đơn thuốc</h4>
-              <small style={{ color: '#666' }}>Kê đơn mới cho bệnh nhân</small>
+              <h4 style={{ margin: 0, color: '#2d3436', fontWeight: 'bold' }}>Bắt đầu khám</h4>
+              <small style={{ color: '#636e72', fontSize: '0.9rem' }}>Vào phòng khám bệnh ảo</small>
             </div>
-            <i className="fas fa-arrow-right" style={{ marginLeft: 'auto', color: '#ccc' }}></i>
-          </div>
-
-          {/* Nút 3: Đi tới Đơn hàng */}
-          <div 
-            style={{ ...actionCardStyle, borderLeft: '5px solid #6c5ce7' }}
-            onClick={() => navigate('/doctor/orders')}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 5px 15px rgba(108, 92, 231, 0.2)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'; }}
-          >
-            <div style={{ background: '#edeaff', padding: '15px', borderRadius: '50%', color: '#6c5ce7', fontSize: '1.5rem' }}>
-              <i className="fas fa-clipboard-list"></i>
-            </div>
-            <div>
-              <h4 style={{ margin: 0, color: '#333' }}>Quản lý đơn hàng</h4>
-              <small style={{ color: '#666' }}>Xem lịch sử đơn thuốc</small>
-            </div>
-            <i className="fas fa-arrow-right" style={{ marginLeft: 'auto', color: '#ccc' }}></i>
+            <i className="fas fa-chevron-right" style={{ marginLeft: 'auto', color: '#b2bec3' }}></i>
           </div>
 
         </div>
       </div>
-      {/* KẾT THÚC PHẦN HEADER MỚI */}
 
-      <h3 style={{ marginBottom: '20px', color: '#636e72', fontSize: '1.1rem' }}>📊 Tổng quan hôm nay</h3>
-
-      {/* --- PHẦN CARDS THỐNG KÊ CŨ --- */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+      {/* 2. STATS OVERVIEW */}
+      <h3 style={{ marginBottom: '25px', color: '#2d3436', fontSize: '1.3rem', fontWeight: '700' }}>📊 Thống kê nhanh</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '25px', marginBottom: '40px' }}>
         {stats.map((item, index) => (
           <div key={index} style={{ 
             backgroundColor: 'white', 
-            padding: '20px', 
-            borderRadius: '12px', 
-            boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+            padding: '25px', 
+            borderRadius: '16px', 
+            boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
             borderLeft: `5px solid ${item.color}`,
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
+            alignItems: 'center',
+            transition: 'transform 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
             <div>
-              <p style={{ color: '#636e72', fontSize: '0.9rem', margin: 0 }}>{item.title}</p>
-              <h3 style={{ fontSize: '2rem', color: '#2d3436', margin: '5px 0' }}>{item.value}</h3>
-              <small style={{ color: '#b2bec3', fontSize: '0.8rem' }}>{item.desc}</small>
+              <p style={{ color: '#636e72', fontSize: '0.95rem', margin: 0, fontWeight: '600' }}>{item.title}</p>
+              <h3 style={{ fontSize: '2.2rem', color: '#2d3436', margin: '5px 0', fontWeight: '800' }}>{item.value}</h3>
+              <small style={{ color: '#b2bec3', fontSize: '0.85rem' }}>{item.desc}</small>
             </div>
-            <div style={{ fontSize: '2.5rem', opacity: 0.2, color: item.color }}>{item.icon}</div>
+            <div style={{ fontSize: '2.8rem', opacity: 0.15, color: item.color }}>{item.icon}</div>
           </div>
         ))}
       </div>
 
-      {/* --- PHẦN BIỂU ĐỒ CŨ --- */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+      {/* 3. CHARTS SECTION */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '30px' }}>
+        
         {/* Biểu đồ Cột */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-          <h4 style={{ marginBottom: '20px', color: '#2d3436' }}>📈 Tần suất tư vấn & Kê đơn (Tuần này)</h4>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={activityData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="tu_van" name="Lượt tư vấn" fill="#74b9ff" radius={[4, 4, 0, 0]} barSize={30} />
-              <Bar dataKey="ke_don" name="Đơn thuốc đã kê" fill="#00b894" radius={[4, 4, 0, 0]} barSize={30} />
+        <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+          <div style={{ marginBottom: '25px' }}>
+             <h4 style={{ margin: 0, color: '#2d3436', fontWeight: 'bold' }}>📈 Hiệu suất làm việc (Tuần này)</h4>
+             <small style={{ color: '#b2bec3' }}>So sánh giữa lượt khám trực tiếp và tư vấn online</small>
+          </div>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={activityData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} />
+              <YAxis axisLine={false} tickLine={false} />
+              <Tooltip 
+                contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 5px 15px rgba(0,0,0,0.1)' }}
+                cursor={{ fill: '#f8f9fa' }} 
+              />
+              <Legend iconType="circle" />
+              <Bar dataKey="kham_benh" name="Lượt khám bệnh" fill="#00b894" radius={[6, 6, 0, 0]} barSize={25} />
+              <Bar dataKey="tu_van" name="Lượt tư vấn" fill="#74b9ff" radius={[6, 6, 0, 0]} barSize={25} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         {/* Biểu đồ Tròn */}
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-          <h4 style={{ marginBottom: '20px', color: '#2d3436' }}>Tỷ lệ kết quả tư vấn</h4>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={outcomeData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {outcomeData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-          <div style={{ marginTop: '10px' }}>
+        <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+          <h4 style={{ marginBottom: '25px', color: '#2d3436', fontWeight: 'bold' }}>Tỷ lệ đầu ra</h4>
+          <div style={{ height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={outcomeData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={70}
+                  outerRadius={90}
+                  paddingAngle={5}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {outcomeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div style={{ marginTop: '20px' }}>
             {outcomeData.map((entry, index) => (
-              <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', fontSize: '0.9rem' }}>
-                <div style={{ width: '12px', height: '12px', backgroundColor: COLORS[index], borderRadius: '50%', marginRight: '10px' }}></div>
-                <span style={{ color: '#636e72' }}>{entry.name}: <strong>{entry.value}</strong></span>
+              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px dashed #f1f2f6' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{ width: '10px', height: '10px', backgroundColor: COLORS[index], borderRadius: '50%', marginRight: '10px' }}></div>
+                    <span style={{ color: '#636e72', fontSize: '0.95rem' }}>{entry.name}</span>
+                </div>
+                <strong style={{ color: '#2d3436' }}>{entry.value}</strong>
               </div>
             ))}
           </div>
         </div>
       </div>
+
     </div>
   );
 };

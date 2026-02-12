@@ -83,10 +83,6 @@ td {
   transition: 0.2s;
 }
 
-.btn-remove:hover {
-  color: #d63031;
-}
-
 /* --- Tổng tiền (Summary) --- */
 .cart-summary {
   background: white;
