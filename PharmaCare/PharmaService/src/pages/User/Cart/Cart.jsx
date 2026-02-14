@@ -6,12 +6,10 @@ import { onAuthStateChanged } from 'firebase/auth';
 import './Cart.css'; 
 
 const Cart = () => {
-  // Lấy các hàm xử lý từ Context
   const { cartItems, removeFromCart, updateQuantity } = useCart();
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // Kiểm tra đăng nhập
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -19,26 +17,28 @@ const Cart = () => {
     return () => unsubscribe();
   }, []);
 
-  // Hàm format tiền tệ (VND)
+  // Format tiền tệ an toàn
   const formatPrice = (amount) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    const validAmount = Number(amount) || 0; // Bảo vệ khỏi NaN
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(validAmount);
   };
 
-  // Tính tổng tiền
-  const totalPrice = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  // Tính tổng tiền an toàn
+  const totalPrice = cartItems.reduce((total, item) => {
+    const price = Number(item.price) || 0;
+    const qty = Number(item.quantity) || 0;
+    return total + (price * qty);
+  }, 0);
 
-  // --- HÀM MỚI: CHUYỂN HƯỚNG SANG TRANG THANH TOÁN ---
   const handleProceedToCheckout = () => {
     if (!user) {
       alert("Vui lòng đăng nhập để thanh toán!");
       navigate('/login');
       return;
     }
-    // Chuyển sang trang Checkout để điền thông tin giao hàng
     navigate('/checkout');
   };
 
-  // Giao diện khi giỏ hàng trống
   if (cartItems.length === 0) {
     return (
       <div className="empty-cart-container">
@@ -60,7 +60,6 @@ const Cart = () => {
       <h2 className="cart-title">Giỏ hàng của bạn ({cartItems.length} sản phẩm)</h2>
 
       <div className="cart-content">
-        {/* --- DANH SÁCH SẢN PHẨM --- */}
         <div className="cart-list">
           <table className="table">
             <thead>
@@ -73,68 +72,72 @@ const Cart = () => {
               </tr>
             </thead>
             <tbody>
-              {cartItems.map((item) => (
-                <tr key={item.id}>
-                  <td className="product-col">
-                    <div className="d-flex align-items-center">
-                      <img 
-                        src={item.img} 
-                        alt={item.name} 
-                        style={{ width: '60px', height: '60px', objectFit: 'cover', marginRight: '15px', borderRadius: '8px' }}
-                        onError={(e) => e.target.src="https://via.placeholder.com/60"} 
-                      />
-                      <div>
-                        <strong style={{ fontSize: '1.1rem' }}>{item.name}</strong>
-                      </div>
-                    </div>
-                  </td>
-                  
-                  <td style={{ verticalAlign: 'middle' }}>{formatPrice(item.price)}</td>
-                  
-                  {/* Cột Số Lượng */}
-                  <td style={{ verticalAlign: 'middle' }}>
-                    <div className="qty-control d-flex align-items-center">
-                      <button 
-                        className="btn btn-sm btn-outline-secondary"
-                        style={{ width: '30px', height: '30px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => updateQuantity(item.id, -1)}
-                        disabled={item.quantity <= 1} 
-                      >
-                        -
-                      </button>
-                      
-                      <span className="mx-3 fw-bold">{item.quantity}</span>
-                      
-                      <button 
-                        className="btn btn-sm btn-outline-secondary"
-                        style={{ width: '30px', height: '30px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => updateQuantity(item.id, 1)}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </td>
+              {cartItems.map((item) => {
+                // Tính toán thành tiền riêng cho từng dòng để tránh NaN hiển thị
+                const itemPrice = Number(item.price) || 0;
+                const itemQty = Number(item.quantity) || 0;
+                const subtotal = itemPrice * itemQty;
 
-                  <td className="subtotal" style={{ verticalAlign: 'middle', fontWeight: 'bold', color: '#2c3e50' }}>
-                    {formatPrice(item.price * item.quantity)}
-                  </td>
-                  
-                  <td style={{ verticalAlign: 'middle' }}>
-                    <button 
-                      className="btn-remove btn btn-danger btn-sm" 
-                      onClick={() => removeFromCart(item.id)}
-                      title="Xóa khỏi giỏ"
-                    >
-                      <i className="fas fa-trash"></i> Xóa
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                return (
+                  <tr key={item.id}>
+                    <td className="product-col">
+                      <div className="d-flex align-items-center">
+                        <img 
+                          src={item.img || item.image} // Hỗ trợ cả 2 tên trường ảnh
+                          alt={item.name} 
+                          style={{ width: '60px', height: '60px', objectFit: 'cover', marginRight: '15px', borderRadius: '8px' }}
+                          onError={(e) => e.target.src="https://via.placeholder.com/60"} 
+                        />
+                        <div>
+                          <strong style={{ fontSize: '1.1rem' }}>{item.name}</strong>
+                        </div>
+                      </div>
+                    </td>
+                    
+                    <td style={{ verticalAlign: 'middle' }}>{formatPrice(itemPrice)}</td>
+                    
+                    <td style={{ verticalAlign: 'middle' }}>
+                      <div className="qty-control d-flex align-items-center">
+                        <button 
+                          className="btn btn-sm btn-outline-secondary"
+                          style={{ width: '30px', height: '30px', padding: '0' }}
+                          onClick={() => updateQuantity(item.id, -1)}
+                          disabled={itemQty <= 1} 
+                        >
+                          -
+                        </button>
+                        
+                        <span className="mx-3 fw-bold">{itemQty}</span>
+                        
+                        <button 
+                          className="btn btn-sm btn-outline-secondary"
+                          style={{ width: '30px', height: '30px', padding: '0' }}
+                          onClick={() => updateQuantity(item.id, 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </td>
+
+                    <td className="subtotal" style={{ verticalAlign: 'middle', fontWeight: 'bold', color: '#2c3e50' }}>
+                      {formatPrice(subtotal)}
+                    </td>
+                    
+                    <td style={{ verticalAlign: 'middle' }}>
+                      <button 
+                        className="btn-remove btn btn-danger btn-sm" 
+                        onClick={() => removeFromCart(item.id)}
+                      >
+                        <i className="fas fa-trash"></i> Xóa
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
-        {/* --- TỔNG TIỀN & NÚT ĐI TIẾP --- */}
         <div className="cart-summary">
           <h3>Tổng cộng</h3>
           <div className="summary-row">

@@ -1,66 +1,66 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
+// Tạo Context
 const CartContext = createContext();
 
-export const useCart = () => useContext(CartContext);
-
 export const CartProvider = ({ children }) => {
-  // Lấy dữ liệu từ localStorage khi mới vào web (để F5 không mất giỏ hàng)
-  const [cartItems, setCartItems] = useState(() => {
-    const savedCart = localStorage.getItem('cartItems');
-    return savedCart ? JSON.parse(savedCart) : [];
-  });
+  const [cartItems, setCartItems] = useState([]);
 
-  // Mỗi khi cartItems thay đổi, lưu ngay vào localStorage
-  useEffect(() => {
-    localStorage.setItem('cartItems', JSON.stringify(cartItems));
-  }, [cartItems]);
-
-  // 1. Thêm sản phẩm vào giỏ
+  // 1. Hàm Thêm vào giỏ (Đã fix lỗi NaN và giữ giá đơn thuốc)
   const addToCart = (product) => {
-    setCartItems(prev => {
-      const existingItem = prev.find(item => item.id === product.id);
+    setCartItems((prevCart) => {
+      const incomingPrice = Number(product.price) || 0;
+      const incomingQty = Number(product.quantity) || 1;
+
+      const existingItem = prevCart.find((item) => item.id === product.id);
+
       if (existingItem) {
-        // Nếu đã có -> Tăng số lượng
-        return prev.map(item => 
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        return prevCart.map((item) =>
+          item.id === product.id
+            ? { 
+                ...item, 
+                quantity: item.quantity + incomingQty,
+                price: incomingPrice > 0 ? incomingPrice : item.price 
+              }
+            : item
         );
       }
-      // Nếu chưa có -> Thêm mới với quantity = 1
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prevCart, { ...product, price: incomingPrice, quantity: incomingQty }];
     });
   };
 
-  // 2. Xóa sản phẩm
-  const removeFromCart = (productId) => {
-    setCartItems(prev => prev.filter(item => item.id !== productId));
-  };
-
-  // 3. Xóa sạch giỏ hàng (Sau khi thanh toán)
-  const clearCart = () => {
-    setCartItems([]);
-  };
-
-  // 4. Tính tổng số lượng sản phẩm (để hiện lên icon đỏ)
-  const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
-
-  // 5. Tăng giảm số lượng sản phẩm
-  const updateQuantity = (productId, amount) => {
-    setCartItems(prevItems => 
-      prevItems.map(item => {
-        if (item.id === productId) {
-          const newQuantity = item.quantity + amount;
-          // Nếu số lượng về 0 thì giữ là 1 hoặc xóa 
-          return { ...item, quantity: newQuantity > 0 ? newQuantity : 1 };
-        }
-        return item;
-      })
+  // 2. Hàm Cập nhật số lượng (Dùng cho nút + - trong Cart.jsx)
+  const updateQuantity = (id, amount) => {
+    setCartItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, quantity: Math.max(1, (Number(item.quantity) || 0) + amount) }
+          : item
+      )
     );
   };
+
+  // 3. Hàm Xóa sản phẩm
+  const removeFromCart = (id) => setCartItems((prev) => prev.filter(i => i.id !== id));
+
+  // 4. Hàm Xóa sạch giỏ hàng (Dùng sau khi thanh toán thành công)
+  const clearCart = () => setCartItems([]);
+
+  // 5. Tính tổng số lượng sản phẩm hiển thị trên Header badge
+  const totalItems = cartItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
 
   return (
     <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, updateQuantity, totalItems }}>
       {children}
     </CartContext.Provider>
   );
+};
+
+// --- QUAN TRỌNG: Thêm export này để sửa lỗi ở Header.jsx ---
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error("useCart must be used within a CartProvider");
+  }
+  return context;
 };

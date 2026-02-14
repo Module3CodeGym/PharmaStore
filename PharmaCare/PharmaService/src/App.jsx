@@ -36,6 +36,7 @@ import OrderDetail from "./pages/User/Orders/OrderDetail";
 import Profile from "./pages/User/Profile/Profile";
 import UploadPrescription from "./pages/User/UploadPrescription";
 import MyHealth from "./pages/User/Profile/MyHealth";
+import PrescriptionDetail from "./pages/User/PrescriptionDetail";
 
 // Chat User
 import UserChat from "./pages/User/Chat/UserChat";
@@ -49,15 +50,17 @@ import DoctorExam from "./pages/Doctor/Exam/DoctorExam";
 import DoctorExamList from "./pages/Doctor/Exam/DoctorExamList";
 import DoctorPatients from "./pages/Doctor/Patients/DoctorPatients";
 import PatientDetail from "./pages/Doctor/Patients/PatientDetail";
-
-// Appointment
+import DoctorPrescriptionList from "./pages/Doctor/Prescriptions/DoctorPrescriptions";// Appointment
 import Appointment from "./pages/User/Appointment";
 
 // Pharmacist
 import PharmacistDashboard from "./pages/Pharmacist/PharmacistDashBoard";
 import CreatePrescription from "./pages/Pharmacist/CreatePrescription";
+import PharmacistInventory from "./pages/Pharmacist/PharmacistInventory";
+import PharmacistOrders from "./pages/Pharmacist/PharmacistOrders";
+import PharmacistPrescriptionHistory from './pages/Pharmacist/PharmacistPrescriptionHistory';
 
-// --- Layout Chính ---
+// --- Layout Chính cho khách vãng lai ---
 const MainLayout = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
@@ -80,20 +83,21 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/appointment" element={<Appointment />} />
         <Route path="/pharmacist/register" element={<PharmacistRegister />} />
 
-        {/* --- NHÓM 2: KHÁCH HÀNG --- */}
+        {/* --- NHÓM 2: KHÁCH HÀNG (Dùng Header/Footer chung) --- */}
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Home />} />
           <Route path="products" element={<ProductList />} />
           <Route path="products/:id" element={<ProductDetail />} />
           <Route path="cart" element={<Cart />} />
+          <Route path="appointment" element={<Appointment />} />
           <Route path="myhealth" element={<MyHealth />} />
           <Route path="checkout" element={<Checkout />} />
+          <Route path="/user/prescription/:id" element={<PrescriptionDetail />} />
         </Route>
 
-        {/* --- NHÓM 3: USER --- */}
+        {/* --- NHÓM 3: NGƯỜI DÙNG ĐÃ ĐĂNG NHẬP --- */}
         <Route element={<UserLayout />}>
           <Route path="orders" element={<MyOrders />} />
           <Route path="orders/:id" element={<OrderDetail />} />
@@ -102,7 +106,7 @@ function App() {
           <Route path="chat" element={<UserChat />} />
         </Route>
 
-        {/* --- NHÓM 4: DOCTOR --- */}
+        {/* --- NHÓM 4: BÁC SĨ --- */}
         <Route path="/doctor" element={<DoctorLayout />}>
           <Route index element={<DoctorDashboard />} />
           <Route path="chat" element={<DoctorChat />} />
@@ -112,14 +116,18 @@ function App() {
           <Route path="exam/:appointmentId" element={<DoctorExam />} />
           <Route path="patients" element={<DoctorPatients />} />
           <Route path="patient/:patientId" element={<PatientDetail />} />
+          <Route path="prescriptions" element={<DoctorPrescriptionList />} />
         </Route>
 
-        {/* --- NHÓM 5: PHARMACIST --- */}
-        <Route path="/pharmacist/dashboard" element={<PharmacistDashboard />} />
-        <Route
-          path="/pharmacist/prescription/:recordId"
-          element={<CreatePrescription />}
-        />
+        {/* --- NHÓM 5: DƯỢC SĨ (PHARMACIST) --- */}
+        <Route path="/pharmacist">
+          {/* Bạn có thể tạo PharmacistLayout tương tự DoctorLayout nếu muốn có Sidebar riêng */}
+          <Route path="dashboard" element={<PharmacistDashboard />} />
+          <Route path="inventory" element={<PharmacistInventory />} />
+          <Route path="orders" element={<PharmacistOrders />} />
+          <Route path="prescription/:recordId" element={<CreatePrescription />} />
+          <Route path="history" element={<PharmacistPrescriptionHistory />} />
+        </Route>
 
       </Routes>
     </CartProvider>
