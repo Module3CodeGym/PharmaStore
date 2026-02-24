@@ -1,27 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebaseConfig'; 
+import { auth, db } from '../firebaseConfig';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
 import { useCart } from '../context/CartContext';
 
-const Header = () => { 
+const Header = () => {
   const [user, setUser] = useState(null);
   const [displayName, setDisplayName] = useState("Khách hàng");
   const [showDropdown, setShowDropdown] = useState(false);
-  
+
   // --- LOGIC THÔNG BÁO ---
   const [notifications, setNotifications] = useState([]);
   const [showNotify, setShowNotify] = useState(false);
-  
+
   const navigate = useNavigate();
-  const { totalItems } = useCart(); 
+  const { totalItems } = useCart();
+
+  // --- LOGIC TÌM KIẾM ---
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const handleSearch = () => {
+    const params = new URLSearchParams(window.location.search);
+    if (searchTerm.trim()) {
+      params.set('s', searchTerm.trim());
+    } else {
+      params.delete('s');
+    }
+    // Chuyển hướng về trang chủ kèm params
+    navigate(`/?${params.toString()}`);
+  };
+
+  useEffect(() => {
+    // Cập nhật searchTerm từ URL khi load trang hoặc URL thay đổi
+    const queryParams = new URLSearchParams(window.location.search);
+    setSearchTerm(queryParams.get('s') || "");
+  }, [window.location.search]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        
+
         // 1. Lấy tên hiển thị
         try {
           const docRef = doc(db, "users", currentUser.uid);
@@ -64,7 +84,7 @@ const Header = () => {
   const handleToggleNotify = async () => {
     setShowNotify(!showNotify);
     setShowDropdown(false); // Đóng dropdown user nếu đang mở
-    
+
     if (!showNotify && unreadNotifyCount > 0) {
       const batch = writeBatch(db);
       notifications.filter(n => !n.isRead).forEach((n) => {
@@ -83,7 +103,7 @@ const Header = () => {
   return (
     <header style={headerStyle}>
       <div style={containerStyle}>
-        
+
         {/* LOGO */}
         <Link to="/" style={logoStyle}>
           <div style={{ fontSize: '2rem', color: '#00b894' }}><i className="fas fa-clinic-medical"></i></div>
@@ -92,13 +112,22 @@ const Header = () => {
 
         {/* THANH TÌM KIẾM */}
         <div style={searchBoxStyle}>
-          <input type="text" placeholder="Tìm thuốc, TPCN..." style={inputStyle} />
-          <button style={searchBtnStyle}><i className="fas fa-search"></i></button>
+          <input
+            type="text"
+            placeholder="Tìm thuốc, TPCN..."
+            style={inputStyle}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          />
+          <button style={searchBtnStyle} onClick={handleSearch}>
+            <i className="fas fa-search"></i>
+          </button>
         </div>
 
         {/* KHU VỰC ACTION */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexShrink: 0 }}>
-          
+
           <Link to="/upload-prescription" style={uploadLinkStyle}>
             <i className="fas fa-file-upload"></i> <span className="hide-on-mobile">Gửi đơn</span>
           </Link>
@@ -106,7 +135,7 @@ const Header = () => {
           {/* CHUÔNG THÔNG BÁO */}
           {user && (
             <div style={{ position: 'relative' }}>
-              <div 
+              <div
                 onClick={handleToggleNotify}
                 style={{ fontSize: '1.3rem', color: '#2d3436', cursor: 'pointer', padding: '5px' }}
               >
@@ -128,7 +157,7 @@ const Header = () => {
                         <div key={n.id} style={{ ...notifyItemStyle, backgroundColor: n.isRead ? 'white' : '#f0faff' }}>
                           <div style={{ fontSize: '0.85rem', color: '#333' }}>{n.message}</div>
                           <div style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px' }}>
-                             {n.createdAt?.toDate().toLocaleString('vi-VN')}
+                            {n.createdAt?.toDate().toLocaleString('vi-VN')}
                           </div>
                         </div>
                       ))
@@ -143,9 +172,9 @@ const Header = () => {
           {user ? (
             <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => { setShowDropdown(!showDropdown); setShowNotify(false); }}>
               <div style={userBoxStyle}>
-                <img 
-                   src={user.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} 
-                   alt="Avatar" style={avatarStyle}
+                <img
+                  src={user.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                  alt="Avatar" style={avatarStyle}
                 />
                 <span className="hide-on-mobile" style={userNameStyle}>{displayName}</span>
                 <i className="fas fa-caret-down" style={{ fontSize: '0.8rem', color: '#999' }}></i>
@@ -161,15 +190,15 @@ const Header = () => {
               )}
             </div>
           ) : (
-             <div style={{ display: 'flex', gap: '8px' }}>
-               <Link to="/login" style={loginBtnStyle}>Đăng nhập</Link>
-             </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Link to="/login" style={loginBtnStyle}>Đăng nhập</Link>
+            </div>
           )}
 
           {/* GIỎ HÀNG */}
           <Link to="/cart" style={{ textDecoration: 'none', position: 'relative' }}>
-              <div style={{ fontSize: '1.3rem', color: '#2d3436' }}><i className="fas fa-shopping-cart"></i></div>
-              {totalItems > 0 && <span style={badgeStyle}>{totalItems}</span>}
+            <div style={{ fontSize: '1.3rem', color: '#2d3436' }}><i className="fas fa-shopping-cart"></i></div>
+            {totalItems > 0 && <span style={badgeStyle}>{totalItems}</span>}
           </Link>
 
         </div>

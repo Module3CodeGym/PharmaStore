@@ -1,0 +1,448 @@
+/* ==========================================
+   ADMIN PANEL STYLES
+   All classes prefixed with admin- to avoid
+   conflicts with user-facing styles
+   ========================================== */
+
+/* --- Admin CSS Variables --- */
+:root {
+  --admin-primary-color: #00b894;
+  --admin-secondary-color: #0984e3;
+  --admin-text-color: #2d3436;
+  --admin-text-light: #636e72;
+  --admin-bg-light: #f5f6fa;
+  --admin-white: #ffffff;
+  --admin-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --admin-error: #e74c3c;
+  --admin-success: #2ecc71;
+  --admin-warning: #f1c40f;
+  --admin-sidebar-width: 260px;
+  --admin-header-height: 60px;
+  --admin-border-radius: 8px;
+}
+
+/* --- Admin Layout Wrapper --- */
+.admin-wrapper {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.admin-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-left: var(--admin-sidebar-width);
+}
+
+.admin-content-area {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  background-color: var(--admin-bg-light);
+}
+
+/* --- Admin Header --- */
+.admin-top-header {
+  height: var(--admin-header-height);
+  background-color: var(--admin-white);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 900;
+}
+
+.admin-header-left h3 {
+  color: var(--admin-text-color);
+  font-weight: 600;
+}
+
+.admin-header-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.admin-notification-icon {
+  position: relative;
+  cursor: pointer;
+  color: #636e72;
+  font-size: 1.2rem;
+  transition: color 0.3s;
+}
+
+.admin-notification-icon:hover {
+  color: var(--admin-primary-color);
+}
+
+.admin-header-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: var(--admin-error);
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 5px;
+  border-radius: 50%;
+  border: 2px solid var(--admin-white);
+}
+
+.admin-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: var(--admin-text-color);
+}
+
+.admin-user-avatar {
+  font-size: 1.8rem;
+  color: #b2bec3;
+}
+
+.admin-user-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+/* --- Admin Sidebar --- */
+.admin-sidebar {
+  width: var(--admin-sidebar-width);
+  height: 100vh;
+  background-color: var(--admin-white);
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--admin-shadow);
+  z-index: 100;
+}
+
+.admin-sidebar-logo {
+  height: var(--admin-header-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #eee;
+}
+
+.admin-sidebar-logo h2 {
+  color: var(--admin-primary-color);
+  font-size: 1.5rem;
+}
+
+.admin-sidebar-nav {
+  flex: 1;
+  padding: 20px 0;
+  overflow-y: auto;
+}
+
+.admin-sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  padding: 12px 24px;
+  color: var(--admin-text-color);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+}
+
+.admin-nav-link:hover {
+  background-color: #f0fff4;
+  color: var(--admin-primary-color);
+}
+
+.admin-nav-link.active {
+  background-color: #e6fffa;
+  color: var(--admin-primary-color);
+  border-left-color: var(--admin-primary-color);
+}
+
+.admin-nav-link .icon {
+  margin-right: 12px;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+}
+
+.admin-nav-link .label {
+  font-weight: 500;
+}
+
+.admin-sidebar-footer {
+  padding: 10px 0;
+  border-top: 1px solid #eee;
+}
+
+.admin-sidebar-user {
+  padding: 15px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 10px;
+}
+
+.admin-sidebar-user .admin-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-sidebar-user .admin-user-avatar {
+  font-size: 2rem;
+  color: var(--admin-primary-color);
+}
+
+.admin-sidebar-user .admin-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-sidebar-user .admin-user-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--admin-text-color);
+}
+
+.admin-sidebar-user .admin-user-role {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.admin-logout-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--admin-text-color);
+}
+
+.admin-logout-btn:hover {
+  background-color: #fff5f5;
+  color: #d63031;
+}
+
+.admin-logout-btn .icon {
+  color: inherit;
+}
+
+/* --- Admin Auth Pages --- */
+.admin-auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f2f5;
+  background-image: linear-gradient(135deg, #00b894 0%, #0984e3 100%);
+}
+
+.admin-auth-card {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.admin-auth-card h2 {
+  color: var(--admin-text-color);
+  margin-bottom: 8px;
+}
+
+.admin-auth-subtitle {
+  color: var(--admin-text-light);
+  margin-bottom: 24px;
+}
+
+.admin-auth-form {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-auth-form .form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: var(--admin-text-color);
+}
+
+.admin-auth-form .form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.admin-auth-form .form-group input:focus {
+  border-color: var(--admin-primary-color);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.1);
+}
+
+.admin-auth-footer {
+  margin-top: 24px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+  font-size: 0.9em;
+}
+
+.admin-auth-footer a {
+  color: var(--admin-primary-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.demo-credentials {
+  margin-top: 20px;
+  text-align: left;
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 0.85em;
+}
+
+.demo-credentials ul {
+  margin: 5px 0 0 20px;
+  color: #636e72;
+  list-style: disc;
+}
+
+/* --- Logout Modal --- */
+.admin-logout-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.admin-logout-modal-content {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  width: 400px;
+  text-align: center;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  animation: adminModalAppear 0.3s ease-out;
+}
+
+@keyframes adminModalAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.admin-logout-icon-wrapper {
+  width: 70px;
+  height: 70px;
+  background: #fff5f5;
+  color: #ff4757;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 20px;
+  font-size: 2rem;
+}
+
+.admin-logout-modal-content h2 {
+  margin-bottom: 15px;
+  color: #2d3436;
+  font-size: 1.5rem;
+}
+
+.admin-logout-modal-content p {
+  color: #636e72;
+  margin-bottom: 25px;
+  line-height: 1.5;
+}
+
+.admin-logout-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.btn-logout-confirm {
+  background: #ff4757 !important;
+  border-color: #ff4757 !important;
+}
+
+.btn-logout-confirm:hover {
+  background: #ff6b81 !important;
+  box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);
+}
+
+/* --- Shared Admin Buttons --- */
+.admin-wrapper .btn {
+  padding: 8px 16px;
+  border-radius: var(--admin-border-radius);
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.admin-wrapper .btn-primary,
+.admin-auth-container .btn-primary {
+  background-color: var(--admin-primary-color);
+  color: white;
+}
+
+.admin-wrapper .btn-primary:hover,
+.admin-auth-container .btn-primary:hover {
+  background-color: #00a884;
+  box-shadow: 0 4px 12px rgba(0, 184, 148, 0.3);
+}
+
+.admin-wrapper .btn-secondary,
+.admin-auth-container .btn-secondary {
+  background-color: #dfe6e9;
+  color: var(--admin-text-color);
+}
+
+.admin-wrapper .btn-secondary:hover,
+.admin-auth-container .btn-secondary:hover {
+  background-color: #b2bec3;
+}
+
+.admin-wrapper .btn-danger {
+  background-color: var(--admin-error);
+  color: white;
+}
+
+.admin-wrapper .btn-danger:hover {
+  background-color: #c0392b;
+}
