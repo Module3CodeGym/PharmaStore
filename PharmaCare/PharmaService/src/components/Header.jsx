@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebaseConfig';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
@@ -9,53 +9,52 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const [displayName, setDisplayName] = useState("Khách hàng");
   const [showDropdown, setShowDropdown] = useState(false);
-
-  // --- LOGIC THÔNG BÁO ---
   const [notifications, setNotifications] = useState([]);
   const [showNotify, setShowNotify] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { totalItems } = useCart();
 
   // --- LOGIC TÌM KIẾM ---
-  const [searchTerm, setSearchTerm] = useState("");
-
   const handleSearch = () => {
-    const params = new URLSearchParams(window.location.search);
     if (searchTerm.trim()) {
-      params.set('s', searchTerm.trim());
+      navigate(`/?s=${encodeURIComponent(searchTerm.trim())}`);
     } else {
-      params.delete('s');
+      navigate(`/`);
     }
-    // Chuyển hướng về trang chủ kèm params
-    navigate(`/?${params.toString()}`);
   };
 
   useEffect(() => {
-    // Cập nhật searchTerm từ URL khi load trang hoặc URL thay đổi
-    const queryParams = new URLSearchParams(window.location.search);
+    const queryParams = new URLSearchParams(location.search);
     setSearchTerm(queryParams.get('s') || "");
-  }, [window.location.search]);
+  }, [location.search]);
 
+  // --- LOGIC AUTH & NOTIFICATIONS ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
 
-        // 1. Lấy tên hiển thị
+        // 1. Lấy tên hiển thị từ Firestore (Để tránh lỗi 400 Bad Request từ Google Auth)
         try {
           const docRef = doc(db, "users", currentUser.uid);
           const docSnap = await getDoc(docRef);
-          if (docSnap.exists() && docSnap.data().displayName) {
-            setDisplayName(docSnap.data().displayName);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setDisplayName(data.displayName || data.name || currentUser.displayName || currentUser.email.split('@')[0]);
           } else {
             setDisplayName(currentUser.displayName || currentUser.email.split('@')[0]);
           }
         } catch (error) {
-          console.error("Lỗi lấy tên:", error);
+          console.error("Lỗi lấy thông tin user (Có thể do Rules):", error);
+          setDisplayName(currentUser.email.split('@')[0]);
         }
 
         // 2. LẮNG NGHE THÔNG BÁO THỜI GIAN THỰC
+        // Sửa lỗi 'undefined' bằng cách lọc chuỗi ngay khi nhận dữ liệu
         const q = query(
           collection(db, "notifications"),
           where("userId", "==", currentUser.uid),
@@ -63,8 +62,19 @@ const Header = () => {
         );
 
         const unsubscribeNotify = onSnapshot(q, (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const data = snapshot.docs.map(doc => {
+            const item = doc.data();
+            return { 
+              id: doc.id, 
+              ...item,
+              // Fix lỗi hiển thị 'Bác sĩ undefined'
+              message: item.message ? item.message.replace('undefined', 'Bác sĩ') : "Thông báo mới"
+            };
+          });
           setNotifications(data);
+        }, (error) => {
+          // Xử lý lỗi 'Missing or insufficient permissions'
+          console.error("Lỗi lắng nghe thông báo:", error);
         });
 
         return () => unsubscribeNotify();
@@ -77,33 +87,39 @@ const Header = () => {
     return () => unsubscribe();
   }, []);
 
-  // Đếm số thông báo chưa đọc
   const unreadNotifyCount = notifications.filter(n => !n.isRead).length;
 
-  // Đánh dấu tất cả là đã đọc khi mở chuông
   const handleToggleNotify = async () => {
     setShowNotify(!showNotify);
-    setShowDropdown(false); // Đóng dropdown user nếu đang mở
+    setShowDropdown(false);
 
     if (!showNotify && unreadNotifyCount > 0) {
-      const batch = writeBatch(db);
-      notifications.filter(n => !n.isRead).forEach((n) => {
-        batch.update(doc(db, "notifications", n.id), { isRead: true });
-      });
-      await batch.commit();
+      try {
+        const batch = writeBatch(db);
+        notifications.filter(n => !n.isRead).forEach((n) => {
+          batch.update(doc(db, "notifications", n.id), { isRead: true });
+        });
+        await batch.commit();
+      } catch (error) {
+        console.error("Lỗi cập nhật trạng thái đã đọc:", error);
+      }
     }
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
-    setShowDropdown(false);
-    navigate('/login');
+    try {
+      await signOut(auth);
+      localStorage.removeItem("user");
+      setShowDropdown(false);
+      navigate('/login');
+    } catch (error) {
+      console.error("Lỗi đăng xuất:", error);
+    }
   };
 
   return (
     <header style={headerStyle}>
       <div style={containerStyle}>
-
         {/* LOGO */}
         <Link to="/" style={logoStyle}>
           <div style={{ fontSize: '2rem', color: '#00b894' }}><i className="fas fa-clinic-medical"></i></div>
@@ -125,9 +141,8 @@ const Header = () => {
           </button>
         </div>
 
-        {/* KHU VỰC ACTION */}
+        {/* ACTION AREA */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexShrink: 0 }}>
-
           <Link to="/upload-prescription" style={uploadLinkStyle}>
             <i className="fas fa-file-upload"></i> <span className="hide-on-mobile">Gửi đơn</span>
           </Link>
@@ -135,17 +150,11 @@ const Header = () => {
           {/* CHUÔNG THÔNG BÁO */}
           {user && (
             <div style={{ position: 'relative' }}>
-              <div
-                onClick={handleToggleNotify}
-                style={{ fontSize: '1.3rem', color: '#2d3436', cursor: 'pointer', padding: '5px' }}
-              >
+              <div onClick={handleToggleNotify} style={{ fontSize: '1.3rem', color: '#2d3436', cursor: 'pointer', padding: '5px' }}>
                 <i className="fas fa-bell"></i>
-                {unreadNotifyCount > 0 && (
-                  <span style={badgeStyle}>{unreadNotifyCount}</span>
-                )}
+                {unreadNotifyCount > 0 && <span style={badgeStyle}>{unreadNotifyCount}</span>}
               </div>
 
-              {/* Dropdown Thông báo */}
               {showNotify && (
                 <div style={notifyDropdownStyle}>
                   <div style={{ padding: '12px 15px', borderBottom: '1px solid #eee', fontWeight: 'bold', fontSize: '0.9rem' }}>Thông báo</div>
@@ -157,7 +166,7 @@ const Header = () => {
                         <div key={n.id} style={{ ...notifyItemStyle, backgroundColor: n.isRead ? 'white' : '#f0faff' }}>
                           <div style={{ fontSize: '0.85rem', color: '#333' }}>{n.message}</div>
                           <div style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px' }}>
-                            {n.createdAt?.toDate().toLocaleString('vi-VN')}
+                            {n.createdAt?.toDate ? n.createdAt.toDate().toLocaleString('vi-VN') : "Vừa xong"}
                           </div>
                         </div>
                       ))
@@ -168,14 +177,11 @@ const Header = () => {
             </div>
           )}
 
-          {/* TÀI KHOẢN */}
+          {/* ACCOUNT */}
           {user ? (
             <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => { setShowDropdown(!showDropdown); setShowNotify(false); }}>
               <div style={userBoxStyle}>
-                <img
-                  src={user.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-                  alt="Avatar" style={avatarStyle}
-                />
+                <img src={user.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt="Avatar" style={avatarStyle} />
                 <span className="hide-on-mobile" style={userNameStyle}>{displayName}</span>
                 <i className="fas fa-caret-down" style={{ fontSize: '0.8rem', color: '#999' }}></i>
               </div>
@@ -190,26 +196,22 @@ const Header = () => {
               )}
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Link to="/login" style={loginBtnStyle}>Đăng nhập</Link>
-            </div>
+            <Link to="/login" style={loginBtnStyle}>Đăng nhập</Link>
           )}
 
-          {/* GIỎ HÀNG */}
+          {/* CART */}
           <Link to="/cart" style={{ textDecoration: 'none', position: 'relative' }}>
             <div style={{ fontSize: '1.3rem', color: '#2d3436' }}><i className="fas fa-shopping-cart"></i></div>
             {totalItems > 0 && <span style={badgeStyle}>{totalItems}</span>}
           </Link>
-
         </div>
       </div>
-
       <style>{`@media (max-width: 768px) { .brand-name, .hide-on-mobile { display: none; } }`}</style>
     </header>
   );
 };
 
-// --- STYLES ---
+// --- STYLES (Giữ nguyên các biến style của bạn) ---
 const headerStyle = { backgroundColor: 'white', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 1000, height: '70px', display: 'flex', alignItems: 'center' };
 const containerStyle = { width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px' };
 const logoStyle = { textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 };

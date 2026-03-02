@@ -1,270 +1,210 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../../../firebaseConfig';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+// SỬA TẠI ĐÂY: Import thêm doc, getDoc, writeBatch
+import { collection, query, where, onSnapshot, orderBy, serverTimestamp, doc, getDoc, writeBatch } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
-import './MyHealth.css'; // Sẽ tạo file CSS ở bước 2
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-// const MyHealth = () => {
-//   const [records, setRecords] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-//       if (user) {
-//         await fetchRecords(user.uid);
-//       } else {
-//         setLoading(false);
-//       }
-//     });
-//     return () => unsubscribe();
-//   }, []);
-
-//   const fetchRecords = async (userId) => {
-//     try {
-//       // Lấy danh sách phiếu khám của User hiện tại, sắp xếp mới nhất lên đầu
-//       const q = query(
-//         collection(db, "medical_records"),
-//         where("patientId", "==", userId),
-//         orderBy("createdAt", "desc")
-//       );
-      
-//       const snapshot = await getDocs(q);
-//       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-//       setRecords(data);
-//     } catch (error) {
-//       console.error("Lỗi lấy hồ sơ:", error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   if (loading) return <div className="loading-msg">Đang tải hồ sơ sức khỏe...</div>;
-
-//   return (
-//     <div className="health-container">
-//       <h2 className="page-title">📂 Hồ sơ sức khỏe điện tử</h2>
-
-//       {records.length === 0 ? (
-//         <div className="empty-state">
-//           <img src="https://cdn-icons-png.flaticon.com/512/4076/4076478.png" alt="Empty" width="100" />
-//           <p>Bạn chưa có lịch sử khám bệnh nào.</p>
-//         </div>
-//       ) : (
-//         <div className="records-grid">
-//           {records.map(record => (
-//             <div key={record.id} className="record-card">
-              
-//               {/* Header Card: Ngày & Trạng thái */}
-//               <div className="card-header-custom">
-//                 <div className="date-badge">
-//                   <i className="far fa-calendar-alt"></i>
-//                   {record.createdAt?.seconds 
-//                     ? new Date(record.createdAt.seconds * 1000).toLocaleDateString('vi-VN') 
-//                     : '...'}
-//                 </div>
-//                 <span className={`status-badge ${record.status}`}>
-//                   {record.status === 'done' ? '✅ Đã có thuốc' : '⏳ Chờ dược sĩ'}
-//                 </span>
-//               </div>
-              
-//               {/* Nội dung chính */}
-//               <div className="card-body-custom">
-//                 <p><strong>👨‍⚕️ Bác sĩ:</strong> {record.doctorName}</p>
-//                 <div className="diagnosis-box">
-//                   <label>Chẩn đoán:</label>
-//                   <p>{record.diagnosis}</p>
-//                 </div>
-//                 <div className="symptoms-box">
-//                   <label>Triệu chứng:</label>
-//                   <p>{record.symptoms}</p>
-//                 </div>
-//               </div>
-
-//               {/* Footer: Nút bấm */}
-//               <div className="card-footer-custom">
-//                 {record.status === 'done' ? (
-//                   <button 
-//                     className="view-pres-btn"
-//                     onClick={() => navigate(`/user/prescription/${record.id}`)}
-//                   >
-//                     Xem đơn thuốc & Mua ngay 💊
-//                   </button>
-//                 ) : (
-//                   <button className="waiting-btn" disabled>
-//                     Đang chờ kê đơn...
-//                   </button>
-//                 )}
-//               </div>
-
-//             </div>
-//           ))}
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
 const MyHealth = () => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
   const navigate = useNavigate();
 
+  // 1. Theo dõi trạng thái đăng nhập và lấy dữ liệu thật từ Firestore
   useEffect(() => {
-    // Giả lập gọi API lấy dữ liệu sau 1 giây
-    const timer = setTimeout(() => {
-      const mockData = [
-        {
-          id: "REC001",
-          doctorName: "BS. Nguyễn Văn A",
-          diagnosis: "Viêm họng cấp tính",
-          symptoms: "Ho kéo dài, đau họng, sốt nhẹ về chiều",
-          status: "done", // Đã có thuốc
-          createdAt: { seconds: 1707738000 } // 12/02/2024
-        },
-        {
-          id: "REC002",
-          doctorName: "BS. Trần Thị B",
-          diagnosis: "Rối loạn tiêu hóa",
-          symptoms: "Đau bụng âm ỉ, buồn nôn",
-          status: "pending_pharmacist", // Đang chờ dược sĩ
-          createdAt: { seconds: 1707824400 } // 13/02/2024
-        },
-        {
-          id: "REC003",
-          doctorName: "BS. Lê Minh C",
-          diagnosis: "Dị ứng thời tiết",
-          symptoms: "Mẩn ngứa cánh tay, hắt hơi liên tục",
-          status: "done",
-          createdAt: { seconds: 1707651600 } // 11/02/2024
-        }
-      ];
-      setRecords(mockData);
-      setLoading(false);
-    }, 1000);
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const q = query(
+          collection(db, "medical_records"),
+          where("patientId", "==", user.uid),
+          orderBy("createdAt", "desc")
+        );
 
-    return () => clearTimeout(timer);
-  }, []);
+        const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setRecords(data);
+          setLoading(false);
+        }, (error) => {
+          console.error("Lỗi lấy hồ sơ:", error);
+          setLoading(false);
+        });
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.2rem', color: '#636e72' }}>
-        ⏳ Đang tải hồ sơ sức khỏe điện tử...
-      </div>
-    );
-  }
+        return () => unsubscribeSnapshot();
+      } else {
+        setLoading(false);
+        navigate('/login');
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, [navigate]);
+
+  // 2. SỬA LẠI: Hàm gửi đánh giá sử dụng Transaction/Batch
+  const handleSubmitReview = async () => {
+    if (!selectedDoctor || !selectedDoctor.doctorId) return;
+    
+    try {
+      const doctorId = selectedDoctor.doctorId;
+      const doctorRef = doc(db, "users", doctorId);
+      
+      // Khởi tạo Batch để chạy 2 lệnh cùng lúc
+      const batch = writeBatch(db);
+
+      // Lệnh 1: Tạo document review mới
+      const newReviewRef = doc(collection(db, "reviews"));
+      batch.set(newReviewRef, {
+        doctorId: doctorId,
+        doctorName: selectedDoctor.doctorName,
+        patientId: auth.currentUser.uid,
+        patientName: auth.currentUser.displayName || "Bệnh nhân",
+        rating: Number(rating), // Đảm bảo lưu đúng kiểu số
+        comment: comment,
+        createdAt: serverTimestamp()
+      });
+
+      // Lấy điểm hiện tại của bác sĩ
+      const doctorSnap = await getDoc(doctorRef);
+      if (doctorSnap.exists()) {
+        const doctorData = doctorSnap.data();
+        const currentRating = Number(doctorData.rating) || 0;
+        const currentCount = Number(doctorData.reviewCount) || 0;
+
+        // Công thức tính điểm trung bình mới
+        const newCount = currentCount + 1;
+        const newAverage = ((currentRating * currentCount) + Number(rating)) / newCount;
+
+        // Lệnh 2: Cập nhật lại điểm số cho bác sĩ
+        batch.update(doctorRef, {
+          rating: Number(newAverage.toFixed(1)),
+          reviewCount: newCount
+        });
+      }
+
+      // Thực thi đồng thời cả 2 lệnh
+      await batch.commit();
+
+      toast.success("Cảm ơn bạn đã đánh giá bác sĩ!");
+      setShowRatingModal(false);
+      setComment("");
+      setRating(5); // Reset lại số sao
+    } catch (error) {
+      console.error("Lỗi khi gửi đánh giá:", error);
+      toast.error("Không thể gửi đánh giá do lỗi phân quyền hoặc kết nối.");
+    }
+  };
+
+  if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}>⏳ Đang tải hồ sơ sức khỏe...</div>;
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 20px' }}>
+      <ToastContainer position="top-right" autoClose={2000} />
       <h2 style={{ color: '#2d3436', marginBottom: '30px', textAlign: 'center', fontWeight: '700' }}>
-        📂 Hồ sơ sức khỏe điện tử
+        📂 Hồ sơ sức khỏe của tôi
       </h2>
 
       {records.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '100px 0' }}>
-          <img src="https://cdn-icons-png.flaticon.com/512/4076/4076478.png" alt="Empty" width="120" style={{ opacity: 0.5 }} />
-          <p style={{ color: '#b2bec3', marginTop: '20px', fontSize: '1.1rem' }}>Bạn chưa có lịch sử khám bệnh nào.</p>
+          <p style={{ color: '#b2bec3' }}>Bạn chưa có lịch sử khám bệnh nào trên hệ thống.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '25px' }}>
           {records.map(record => (
-            <div key={record.id} style={{ 
-              background: 'white', 
-              borderRadius: '16px', 
-              overflow: 'hidden', 
-              boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
-              border: '1px solid #f1f2f6',
-              transition: 'transform 0.3s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              
+            <div key={record.id} style={cardStyle}>
               {/* Header Card */}
-              <div style={{ 
-                padding: '15px 20px', 
-                background: '#f8f9fa', 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                borderBottom: '1px solid #f1f2f6'
-              }}>
-                <div style={{ fontSize: '0.85rem', color: '#636e72', fontWeight: '600' }}>
-                  📅 {new Date(record.createdAt.seconds * 1000).toLocaleDateString('vi-VN')}
+              <div style={cardHeaderStyle}>
+                <div style={{ fontSize: '0.85rem', color: '#636e72' }}>
+                  📅 {record.createdAt?.seconds ? new Date(record.createdAt.seconds * 1000).toLocaleDateString('vi-VN') : 'Mới'}
                 </div>
                 <span style={{ 
-                  fontSize: '0.75rem', 
-                  padding: '4px 10px', 
-                  borderRadius: '20px', 
-                  fontWeight: '700',
+                  ...statusBadgeStyle, 
                   background: record.status === 'done' ? '#e3f9e5' : '#fff3cd',
                   color: record.status === 'done' ? '#1f9d55' : '#856404'
                 }}>
-                  {record.status === 'done' ? '✅ ĐÃ CÓ THUỐC' : '⏳ CHỜ KÊ ĐƠN'}
+                  {record.status === 'done' ? '✅ HOÀN THÀNH' : '⏳ ĐANG XỬ LÝ'}
                 </span>
               </div>
               
               {/* Body Content */}
               <div style={{ padding: '20px' }}>
-                <p style={{ margin: '0 0 15px 0', fontSize: '1.05rem', fontWeight: '700', color: '#2d3436' }}>
-                  👨‍⚕️ {record.doctorName}
-                </p>
+                <p style={{ margin: '0 0 10px 0', fontWeight: '700' }}>👨‍⚕️ {record.doctorName}</p>
+                <p style={{ fontSize: '0.9rem', color: '#636e72' }}><b>Chẩn đoán:</b> {record.diagnosis}</p>
                 
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ fontSize: '0.8rem', color: '#b2bec3', textTransform: 'uppercase', fontWeight: '700' }}>Chẩn đoán:</label>
-                  <p style={{ margin: '5px 0 0', color: '#2d3436', fontSize: '0.95rem', lineHeight: '1.5' }}>{record.diagnosis}</p>
-                </div>
-
-                <div style={{ marginBottom: '5px' }}>
-                  <label style={{ fontSize: '0.8rem', color: '#b2bec3', textTransform: 'uppercase', fontWeight: '700' }}>Triệu chứng:</label>
-                  <p style={{ margin: '5px 0 0', color: '#636e72', fontSize: '0.9rem', fontStyle: 'italic' }}>{record.symptoms}</p>
+                {/* Khu vực chứa thân thẻ */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
+                    {record.status === 'done' && (
+                    <button 
+                        onClick={() => { setSelectedDoctor(record); setShowRatingModal(true); setRating(5); }}
+                        style={ratingBtnStyle}
+                    >
+                        ⭐ Đánh giá bác sĩ
+                    </button>
+                    )}
                 </div>
               </div>
 
               {/* Footer Button */}
-              <div style={{ padding: '15px 20px', background: 'white' }}>
-                {record.status === 'done' ? (
-                  <button 
-                    onClick={() => navigate(`/user/prescription/${record.id}`)}
-                    style={{ 
-                      width: '100%', 
-                      padding: '12px', 
-                      background: '#00b894', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '10px', 
-                      fontWeight: 'bold', 
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 12px rgba(0, 184, 148, 0.2)'
-                    }}
-                  >
-                    Xem đơn thuốc & Mua ngay 💊
-                  </button>
-                ) : (
-                  <button 
-                    disabled 
-                    style={{ 
-                      width: '100%', 
-                      padding: '12px', 
-                      background: '#dfe6e9', 
-                      color: '#b2bec3', 
-                      border: 'none', 
-                      borderRadius: '10px', 
-                      fontWeight: 'bold', 
-                      cursor: 'not-allowed'
-                    }}
-                  >
-                    Đang chờ dược sĩ xử lý...
-                  </button>
-                )}
+              <div style={{ padding: '15px 20px', borderTop: '1px solid #f1f2f6' }}>
+                <button 
+                  onClick={() => navigate(`/user/prescription/${record.id}`)}
+                  disabled={record.status !== 'done'}
+                  style={{ 
+                    ...buyBtnStyle,
+                    background: record.status === 'done' ? '#00b894' : '#dfe6e9',
+                    cursor: record.status === 'done' ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  {record.status === 'done' ? 'Xem đơn thuốc & Mua ngay 💊' : 'Đang chờ dược sĩ...'}
+                </button>
               </div>
-
             </div>
           ))}
+        </div>
+      )}
+
+      {/* MODAL ĐÁNH GIÁ */}
+      {showRatingModal && (
+        <div style={modalOverlayStyle}>
+          <div style={modalContentStyle}>
+            <h3>Đánh giá bác sĩ</h3>
+            <p>Bác sĩ: <b>{selectedDoctor?.doctorName}</b></p>
+            <div style={{ fontSize: '2rem', margin: '15px 0' }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <span key={star} onClick={() => setRating(star)} style={{ cursor: 'pointer', color: star <= rating ? '#ffc107' : '#e4e5e9' }}>★</span>
+              ))}
+            </div>
+            <textarea 
+              placeholder="Nhận xét của bạn về chất lượng khám..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              style={textareaStyle}
+            />
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button onClick={() => setShowRatingModal(false)} style={cancelBtnStyle}>Hủy</button>
+              <button onClick={handleSubmitReview} style={confirmBtnStyle}>Gửi đánh giá</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 };
+
+// --- Styles ---
+const cardStyle = { background: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.05)', border: '1px solid #f1f2f6' };
+const cardHeaderStyle = { padding: '15px 20px', background: '#f8f9fa', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f2f6' };
+const statusBadgeStyle = { fontSize: '0.7rem', padding: '4px 10px', borderRadius: '20px', fontWeight: 'bold' };
+const ratingBtnStyle = { background: 'none', border: '1px solid #fdcb6e', color: '#e1b12c', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', width: 'fit-content' };
+const buyBtnStyle = { width: '100%', padding: '12px', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold' };
+const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 };
+const modalContentStyle = { background: 'white', padding: '30px', borderRadius: '20px', width: '400px', textAlign: 'center' };
+const textareaStyle = { width: '100%', height: '80px', padding: '10px', borderRadius: '10px', border: '1px solid #ddd', resize: 'none' };
+const cancelBtnStyle = { flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' };
+const confirmBtnStyle = { flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#00b894', color: 'white', fontWeight: 'bold', cursor: 'pointer' };
 
 export default MyHealth;

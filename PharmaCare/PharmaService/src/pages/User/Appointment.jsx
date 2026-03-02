@@ -1,46 +1,66 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom"; // Thêm useSearchParams
 import { auth, db } from "../../firebaseConfig"; 
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, query, where } from "firebase/firestore";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const Appointment = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams(); // Lấy params từ URL
   const [currentUser, setCurrentUser] = useState(null);
+  const [doctors, setDoctors] = useState([]);
+
+  // Lấy dữ liệu từ URL để điền vào form ngay khi load
+  const initialDoctorId = searchParams.get("doctorId") || "";
+  const initialDoctorName = searchParams.get("doctorName") || "";
+  const selectedSpecialty = searchParams.get("specialty") || "";
+
   const [formData, setFormData] = useState({
-    doctor: "",
+    doctorId: initialDoctorId,
+    doctorName: initialDoctorName,
     date: "",
     time: "",
     symptoms: "",
   });
 
-  // Kiểm tra trạng thái đăng nhập
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setCurrentUser(user);
-      } else {
-        toast.warning("Vui lòng đăng nhập để sử dụng chức năng này!");
-      }
+      if (user) setCurrentUser(user);
+      else toast.warning("Vui lòng đăng nhập để đặt lịch!");
     });
     return () => unsubscribe();
   }, []);
 
+  // Lấy danh sách bác sĩ từ DB để đề phòng người dùng muốn chọn lại bác sĩ khác
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      const q = query(collection(db, "users"), where("role", "==", "doctor"));
+      const querySnapshot = await getDocs(q);
+      setDoctors(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    };
+    fetchDoctors();
+  }, []);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (e.target.name === "doctor") {
+      const selectedDoc = doctors.find(doc => doc.id === e.target.value);
+      setFormData({ 
+        ...formData, 
+        doctorId: selectedDoc ? selectedDoc.id : "", 
+        doctorName: selectedDoc ? selectedDoc.displayName : "" 
+      });
+    } else {
+      setFormData({ ...formData, [e.target.name]: e.target.value });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!currentUser) {
-      toast.error("Bạn cần đăng nhập trước khi đặt lịch!");
-      return;
-    }
+    if (!currentUser) return toast.error("Bạn cần đăng nhập!");
 
     try {
-      // Gửi dữ liệu lên Firestore
       await addDoc(collection(db, "appointments"), {
         ...formData,
         patientName: currentUser.displayName || currentUser.email.split('@')[0], 
@@ -48,17 +68,10 @@ const Appointment = () => {
         status: "pending",
         createdAt: serverTimestamp(),
       });
-
-      toast.success("🚀 Đặt lịch thành công! Đang quay lại trang chủ...", {
-        position: "top-right",
-        autoClose: 2000,
-        theme: "colored",
-      });
-
+      toast.success("🚀 Đặt lịch thành công!");
       setTimeout(() => navigate("/"), 2500);
     } catch (error) {
-      console.error("Lỗi đặt lịch:", error);
-      toast.error("Có lỗi xảy ra, vui lòng thử lại!");
+      toast.error("Có lỗi xảy ra!");
     }
   };
 
@@ -66,22 +79,24 @@ const Appointment = () => {
     <div style={{ padding: "30px", background: "#f4f6f9", minHeight: "100vh" }}>
       <ToastContainer />
       <div style={{ maxWidth: "600px", margin: "0 auto", background: "white", padding: "40px", borderRadius: "20px", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
-        <h2 style={{ marginBottom: "20px", color: "#2d3436", textAlign: "center" }}>📅 Đặt Lịch Tư Vấn</h2>
+        <h2 style={{ textAlign: "center" }}>📅 Đặt Lịch Tư Vấn</h2>
         
-        {currentUser && (
-          <p style={{ textAlign: "center", color: "#636e72", marginBottom: "20px" }}>
-            Đang đặt lịch cho: <strong>{currentUser.displayName || currentUser.email}</strong>
-          </p>
+        {/* Thông báo bác sĩ đã được chọn sẵn */}
+        {formData.doctorName && (
+          <div style={{ padding: "12px", background: "#e3f2fd", borderRadius: "10px", marginBottom: "20px", border: "1px solid #007bff" }}>
+            📍 Bạn đang đặt lịch với: <b>BS. {formData.doctorName}</b> <br/>
+            Chuyên khoa: <b>{selectedSpecialty || "Đang tải..."}</b>
+          </div>
         )}
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: "20px" }}>
             <label style={{ fontWeight: "600" }}>Bác sĩ phụ trách</label>
-            <select name="doctor" value={formData.doctor} onChange={handleChange} required style={inputStyle}>
+            <select name="doctor" value={formData.doctorId} onChange={handleChange} required style={inputStyle}>
               <option value="">-- Chọn bác sĩ --</option>
-              <option value="BS. Nguyễn Văn A">BS. Nguyễn Văn A - Nội tổng quát</option>
-              <option value="BS. Trần Thị B">BS. Trần Thị B - Nhi khoa</option>
-              <option value="BS. Lê Minh C">BS. Lê Minh C - Da liễu</option>
+              {doctors.map((doc) => (
+                <option key={doc.id} value={doc.id}>BS. {doc.displayName} - {doc.specialty}</option>
+              ))}
             </select>
           </div>
 
@@ -114,7 +129,7 @@ const Appointment = () => {
   );
 };
 
-const inputStyle = { width: "100%", padding: "12px", marginTop: "8px", borderRadius: "10px", border: "1px solid #dfe6e9", outline: "none", boxSizing: "border-box" };
+const inputStyle = { width: "100%", padding: "12px", marginTop: "8px", borderRadius: "10px", border: "1px solid #dfe6e9", boxSizing: "border-box" };
 const buttonStyle = { width: "100%", padding: "16px", background: "#0984e3", color: "white", border: "none", borderRadius: "12px", fontWeight: "bold", cursor: "pointer" };
 
 export default Appointment;
