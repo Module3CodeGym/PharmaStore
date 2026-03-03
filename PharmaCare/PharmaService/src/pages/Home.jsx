@@ -439,14 +439,17 @@ const Home = () => {
       <section style={{ padding: '70px 20px', background: '#f8f9fa' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           
+          {/* Header */}
           <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            marginBottom: '50px' 
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '50px',
+            flexWrap: 'wrap',
+            gap: '15px'
           }}>
             <h2 style={{ 
-              borderLeft: '5px solid #007bff', 
+              borderLeft: '5px solid #007bff',
               paddingLeft: '15px',
               fontSize: '28px'
             }}>
@@ -454,25 +457,26 @@ const Home = () => {
             </h2>
 
             <Link 
-              to="/appointment" 
+              to="/appointment"
               style={{ 
-                color: '#007bff', 
-                fontWeight: 'bold', 
-                textDecoration: 'none' 
+                color: '#007bff',
+                fontWeight: 'bold',
+                textDecoration: 'none'
               }}
             >
               Đặt lịch ngay →
             </Link>
           </div>
 
+          {/* Grid */}
           <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(4, 1fr)', 
-            gap: '30px' 
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '30px'
           }}>
-
-            {doctors.map(doctor => (
-              <div key={doctor.id}
+            {doctors.map((doctor) => (
+              <div
+                key={doctor.id}
                 style={{
                   background: '#ffffff',
                   padding: '30px 20px',
@@ -483,30 +487,32 @@ const Home = () => {
                   position: 'relative',
                   cursor: 'pointer'
                 }}
-                onMouseOver={(e) => {
+                onClick={() => window.location.href = `/doctor/${doctor.id}`}
+                onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-8px)';
                   e.currentTarget.style.boxShadow = '0 15px 35px rgba(0,0,0,0.1)';
                 }}
-                onMouseOut={(e) => {
+                onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.06)';
                 }}
               >
 
-                {/* Badge Online */}
+                {/* Badge trạng thái */}
                 <span style={{
                   position: 'absolute',
                   top: '15px',
                   right: '15px',
-                  background: '#28c76f',
+                  background: doctor.online ? '#28c76f' : '#6c757d',
                   color: 'white',
                   padding: '4px 10px',
                   borderRadius: '20px',
                   fontSize: '12px'
                 }}>
-                  Online
+                  {doctor.online ? 'Online' : 'Offline'}
                 </span>
 
+                {/* Avatar */}
                 <img
                   src={doctor.img}
                   alt={doctor.name}
@@ -525,7 +531,7 @@ const Home = () => {
                 </h4>
 
                 <p style={{ 
-                  color: '#007bff', 
+                  color: '#007bff',
                   fontWeight: '600',
                   marginBottom: '8px'
                 }}>
@@ -541,14 +547,19 @@ const Home = () => {
                 </div>
 
                 <p style={{ 
-                  fontSize: '14px', 
-                  color: '#777', 
-                  marginBottom: '18px' 
+                  fontSize: '14px',
+                  color: '#777',
+                  marginBottom: '18px'
                 }}>
                   {doctor.experience}
                 </p>
 
-                <Link to="/appointment" style={{ textDecoration: 'none' }}>
+                {/* Button */}
+                <Link
+                  to="/appointment"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ textDecoration: 'none' }}
+                >
                   <button style={{
                     padding: '10px 25px',
                     background: 'linear-gradient(45deg,#007bff,#00b894)',
@@ -565,6 +576,7 @@ const Home = () => {
 
               </div>
             ))}
+
           </div>
         </div>
       </section>

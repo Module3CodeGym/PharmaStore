@@ -37,6 +37,7 @@ import Profile from "./pages/User/Profile/Profile";
 import UploadPrescription from "./pages/User/UploadPrescription";
 import MyHealth from "./pages/User/Profile/MyHealth";
 import PrescriptionDetail from "./pages/User/PrescriptionDetail";
+import Viewprofiledoctor from "./pages/User/Profile/Viewprofiledoctor";
 
 // Chat User
 import UserChat from "./pages/User/Chat/UserChat";
@@ -95,6 +96,7 @@ function App() {
           <Route path="myhealth" element={<MyHealth />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="/user/prescription/:id" element={<PrescriptionDetail />} />
+          <Route path="doctor/:id" element={<Viewprofiledoctor />} />
         </Route>
 
         {/* --- NHÓM 3: NGƯỜI DÙNG ĐÃ ĐĂNG NHẬP --- */}
