@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom'; // Bổ sung useLocation
 import { auth, db } from '../firebaseConfig'; 
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
@@ -15,11 +15,12 @@ const Header = () => {
   const [showNotify, setShowNotify] = useState(false);
   
   const navigate = useNavigate();
+  const location = useLocation(); // Khai báo location
   const { totalItems } = useCart(); 
 
-<<<<<<< Updated upstream
-=======
   // --- LOGIC TÌM KIẾM ---
+  const [searchTerm, setSearchTerm] = useState(""); // Khai báo state searchTerm
+
   const handleSearch = () => {
     if (searchTerm.trim()) {
       navigate(`/?s=${encodeURIComponent(searchTerm.trim())}`);
@@ -33,22 +34,15 @@ const Header = () => {
     setSearchTerm(queryParams.get('s') || "");
   }, [location.search]);
 
-  // --- LOGIC AUTH & NOTIFICATIONS (ĐÃ FIX LỖI) ---
->>>>>>> Stashed changes
+  // --- LOGIC AUTH & NOTIFICATIONS ---
   useEffect(() => {
-    // 1. Tạo biến để giữ "phích cắm" lắng nghe thông báo
     let unsubscribeNotify = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-<<<<<<< Updated upstream
-        
-        // 1. Lấy tên hiển thị
-=======
 
-        // 2. Lấy tên hiển thị từ Firestore
->>>>>>> Stashed changes
+        // Lấy tên hiển thị từ Firestore
         try {
           const docRef = doc(db, "users", currentUser.uid);
           const docSnap = await getDoc(docRef);
@@ -58,30 +52,17 @@ const Header = () => {
             setDisplayName(currentUser.displayName || currentUser.email.split('@')[0]);
           }
         } catch (error) {
-<<<<<<< Updated upstream
-          console.error("Lỗi lấy tên:", error);
-        }
-
-        // 2. LẮNG NGHE THÔNG BÁO THỜI GIAN THỰC
-=======
           console.error("Lỗi lấy thông tin user:", error);
           setDisplayName(currentUser.email.split('@')[0]);
         }
 
-        // 3. LẮNG NGHE THÔNG BÁO THỜI GIAN THỰC
->>>>>>> Stashed changes
+        // LẮNG NGHE THÔNG BÁO
         const q = query(
           collection(db, "notifications"),
           where("userId", "==", currentUser.uid),
           orderBy("createdAt", "desc")
         );
 
-<<<<<<< Updated upstream
-        const unsubscribeNotify = onSnapshot(q, (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setNotifications(data);
-=======
-        // Gán hàm tắt lắng nghe vào biến unsubscribeNotify
         unsubscribeNotify = onSnapshot(q, (snapshot) => {
           const data = snapshot.docs.map(doc => {
             const item = doc.data();
@@ -93,16 +74,13 @@ const Header = () => {
           });
           setNotifications(data);
         }, (error) => {
-          // Bắt lỗi ngầm để tránh văng thông báo đỏ
           console.error("Lỗi ngầm khi lắng nghe thông báo:", error.code);
->>>>>>> Stashed changes
         });
 
       } else {
-        // 4. NGƯỜI DÙNG ĐĂNG XUẤT: RÚT PHÍCH CẮM THÔNG BÁO NGAY LẬP TỨC
         if (unsubscribeNotify) {
-          unsubscribeNotify(); // Tắt vòi hút dữ liệu
-          unsubscribeNotify = null; // Xóa sạch biến
+          unsubscribeNotify();
+          unsubscribeNotify = null;
         }
         setUser(null);
         setDisplayName("Khách hàng");
@@ -110,20 +88,17 @@ const Header = () => {
       }
     });
 
-    // Cleanup khi toàn bộ component Header bị hủy
     return () => {
       if (unsubscribeNotify) unsubscribeNotify();
       unsubscribeAuth();
     };
   }, []);
 
-  // Đếm số thông báo chưa đọc
   const unreadNotifyCount = notifications.filter(n => !n.isRead).length;
 
-  // Đánh dấu tất cả là đã đọc khi mở chuông
   const handleToggleNotify = async () => {
     setShowNotify(!showNotify);
-    setShowDropdown(false); // Đóng dropdown user nếu đang mở
+    setShowDropdown(false); 
     
     if (!showNotify && unreadNotifyCount > 0) {
       const batch = writeBatch(db);
@@ -150,10 +125,17 @@ const Header = () => {
           <span className="brand-name" style={brandNameStyle}>PharmaStore</span>
         </Link>
 
-        {/* THANH TÌM KIẾM */}
+        {/* THANH TÌM KIẾM (Đã sửa) */}
         <div style={searchBoxStyle}>
-          <input type="text" placeholder="Tìm thuốc, TPCN..." style={inputStyle} />
-          <button style={searchBtnStyle}><i className="fas fa-search"></i></button>
+          <input 
+            type="text" 
+            placeholder="Tìm thuốc, TPCN..." 
+            style={inputStyle}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          />
+          <button style={searchBtnStyle} onClick={handleSearch}><i className="fas fa-search"></i></button>
         </div>
 
         {/* KHU VỰC ACTION */}
@@ -188,7 +170,7 @@ const Header = () => {
                         <div key={n.id} style={{ ...notifyItemStyle, backgroundColor: n.isRead ? 'white' : '#f0faff' }}>
                           <div style={{ fontSize: '0.85rem', color: '#333' }}>{n.message}</div>
                           <div style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px' }}>
-                             {n.createdAt?.toDate().toLocaleString('vi-VN')}
+                             {n.createdAt?.toDate ? n.createdAt.toDate().toLocaleString('vi-VN') : "Vừa xong"}
                           </div>
                         </div>
                       ))
@@ -240,7 +222,7 @@ const Header = () => {
   );
 };
 
-// --- STYLES ---
+// --- STYLES (Giữ nguyên của bạn) ---
 const headerStyle = { backgroundColor: 'white', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 1000, height: '70px', display: 'flex', alignItems: 'center' };
 const containerStyle = { width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px' };
 const logoStyle = { textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 };

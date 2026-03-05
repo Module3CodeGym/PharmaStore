@@ -1,56 +1,65 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-// Import các function cần thiết từ firebase của bạn
-import { db } from "../../../firebaseConfig"; 
+import { db } from "../../../firebaseConfig"; // ⚠️ Đảm bảo đường dẫn này khớp với thư mục của bạn
 import { doc, getDoc } from "firebase/firestore";
 
-const ViewProfileDoctor = () => {
-  const { id } = useParams(); // id này là Document ID trên Firestore
+const Viewprofiledoctor = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
 
+  // 1. Khai báo state lưu dữ liệu từ Firebase
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Lấy dữ liệu từ Database
+  // 2. Gọi dữ liệu từ database khi component được render
   useEffect(() => {
     const fetchDoctor = async () => {
+      if (!id) return;
+      
       try {
         setLoading(true);
-        // Trỏ tới document của bác sĩ trong collection "users" (hoặc "doctors")
-        const docRef = doc(db, "users", id); 
+        // Tham chiếu đến bảng 'users', lấy document có ID tương ứng
+        const docRef = doc(db, "users", id);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
+          // Gộp ID của document vào data
           setDoctor({ id: docSnap.id, ...docSnap.data() });
         } else {
-          console.log("Không tìm thấy bác sĩ này trên DB!");
+          console.warn("Không tìm thấy dữ liệu bác sĩ trên DB!");
+          setDoctor(null);
         }
       } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu bác sĩ:", error);
+        console.error("Lỗi khi lấy thông tin bác sĩ:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) fetchDoctor();
+    fetchDoctor();
   }, [id]);
 
+  // 3. Xử lý trạng thái đang tải hoặc không tìm thấy
   if (loading) {
     return (
       <div style={{ padding: "40px", textAlign: "center" }}>
-        <p>Đang tải thông tin bác sĩ...</p>
+        <h2>⏳ Đang tải thông tin bác sĩ...</h2>
       </div>
     );
   }
 
   if (!doctor) {
     return (
-      <div style={{ padding: "40px", textAlign: "center" }}>
-        <h2>Không tìm thấy thông tin bác sĩ</h2>
-        <button onClick={() => navigate(-1)}>Quay lại</button>
+      <div style={{ padding: "40px", textAlign: "center", color: "red" }}>
+        <h2>❌ Không tìm thấy thông tin bác sĩ</h2>
+        <button onClick={() => navigate(-1)} style={{ padding: '8px 15px', cursor: 'pointer' }}>Quay lại</button>
       </div>
     );
   }
+
+  // 4. Fallback dữ liệu (phòng trường hợp DB thiếu trường)
+  const doctorName = doctor.name || doctor.userInfo?.displayName || "Bác sĩ chưa cập nhật tên";
+  const doctorImage = doctor.img || doctor.photoURL || doctor.userInfo?.photoURL || "https://cdn-icons-png.flaticon.com/512/3774/3774299.png";
 
   return (
     <div style={{ padding: "40px", maxWidth: "900px", margin: "0 auto" }}>
@@ -79,31 +88,33 @@ const ViewProfileDoctor = () => {
           boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
         }}
       >
+        {/* Khối Ảnh */}
         <img
-          src={doctor.img || doctor.photoURL || "https://via.placeholder.com/150"}
-          alt={doctor.name}
+          src={doctorImage}
+          alt={doctorName}
           style={{
-            width: "200px",
-            height: "200px",
+            width: "150px",
+            height: "150px",
             objectFit: "cover",
             borderRadius: "10px",
-            border: "1px solid #eee"
+            border: "2px solid #eee"
           }}
         />
 
-        <div style={{ flex: 1 }}>
-          <h2 style={{ color: "#2c3e50", marginBottom: "10px" }}>{doctor.name || doctor.displayName}</h2>
-          <p><strong>Chuyên khoa:</strong> {doctor.specialty || "Đang cập nhật"}</p>
-          <p><strong>Kinh nghiệm:</strong> {doctor.experience || "N/A"}</p>
-          <p><strong>Đánh giá:</strong> ⭐ {doctor.rating || 5}     </p>
-          <p><strong>Số điện thoại:</strong> {doctor.phone || "Liên hệ qua app"}</p>
-          <p><strong>Email:</strong> {doctor.email}</p>
-          <p><strong>Địa chỉ:</strong> {doctor.address || "Việt Nam"}</p>
+        {/* Khối Thông tin */}
+        <div>
+          <h2 style={{ marginTop: 0 }}>{doctorName}</h2>
+          <p><strong>Chuyên khoa:</strong> {doctor.specialty || "Đa khoa"}</p>
+          <p><strong>Kinh nghiệm:</strong> {doctor.experience || "Đang cập nhật"}</p>
+          <p><strong>Đánh giá:</strong> ⭐ {Number(doctor.rating) || 0} ({doctor.reviewCount || doctor.reviews || 0} lượt)</p>
+          <p><strong>Số điện thoại:</strong> {doctor.phone || doctor.userInfo?.phone || "Chưa cập nhật"}</p>
+          <p><strong>Email:</strong> {doctor.email || doctor.userInfo?.email || "Chưa cập nhật"}</p>
+          <p><strong>Địa chỉ:</strong> {doctor.location || doctor.address || "Tư vấn Online"}</p>
 
-          <div style={{ marginTop: "15px", padding: "15px", background: "#f8f9fa", borderRadius: "8px" }}>
+          <div style={{ marginTop: "15px" }}>
             <strong>Giới thiệu:</strong>
-            <p style={{ lineHeight: "1.6", color: "#555" }}>
-              {doctor.description || "Bác sĩ chưa có mô tả chi tiết."}
+            <p style={{ lineHeight: '1.6', color: '#555' }}>
+              {doctor.description || "Bác sĩ chưa cập nhật thông tin giới thiệu chi tiết."}
             </p>
           </div>
 
@@ -111,17 +122,14 @@ const ViewProfileDoctor = () => {
             onClick={() => navigate(`/appointment?doctorId=${doctor.id}`)}
             style={{
               marginTop: "20px",
-              padding: "12px 25px",
+              padding: "10px 20px",
               background: "#28a745",
               color: "#fff",
               border: "none",
               borderRadius: "5px",
-              fontWeight: "600",
               cursor: "pointer",
-              transition: "0.3s"
+              fontWeight: "bold"
             }}
-            onMouseOver={(e) => e.target.style.background = "#218838"}
-            onMouseOut={(e) => e.target.style.background = "#28a745"}
           >
             Đặt lịch khám ngay
           </button>
@@ -131,4 +139,4 @@ const ViewProfileDoctor = () => {
   );
 };
 
-export default ViewProfileDoctor;
+export default Viewprofiledoctor;

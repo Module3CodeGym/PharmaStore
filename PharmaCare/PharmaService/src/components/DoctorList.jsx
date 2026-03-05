@@ -1,8 +1,46 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { db } from '../firebaseConfig'; // Đảm bảo đường dẫn này đúng với dự án của bạn
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
-export default function DoctorList({ doctors }) {
+export default function DoctorList() {
   const navigate = useNavigate();
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // --- LẤY DỮ LIỆU TỪ FIREBASE ---
+  useEffect(() => {
+    // Truy vấn tất cả users có role là "doctor"
+    const q = query(
+      collection(db, "users"),
+      where("role", "==", "doctor")
+    );
+
+    // Lắng nghe dữ liệu realtime
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const doctorData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.displayName || data.name || "Bác sĩ",
+          specialty: data.specialty || "Đa khoa",
+          experience: data.experience || "Nhiều năm kinh nghiệm",
+          rating: Number(data.rating) || 0,
+          reviews: data.reviewCount || 0,
+          img: data.photoURL || data.img || "https://cdn-icons-png.flaticon.com/512/3774/3774299.png",
+          status: data.status || "offline"
+        };
+      });
+
+      setDoctors(doctorData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Lỗi lấy danh sách bác sĩ:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Hàm render sao đánh giá
   const renderStars = (rating) => {
@@ -24,9 +62,24 @@ export default function DoctorList({ doctors }) {
     );
   };
 
-  // Nếu chưa có dữ liệu thì không hiển thị hoặc hiện loading
+  // Trạng thái đang tải dữ liệu
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '60px', color: '#666' }}>
+        <div style={{ fontSize: '2rem', marginBottom: '15px' }}>⏳</div>
+        <h3>Đang tải danh sách bác sĩ...</h3>
+      </div>
+    );
+  }
+
+  // Trạng thái không có bác sĩ nào
   if (!doctors || doctors.length === 0) {
-    return <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>Đang cập nhật danh sách bác sĩ...</div>;
+    return (
+      <div style={{ textAlign: 'center', padding: '60px', color: '#999', background: 'white', borderRadius: '20px' }}>
+        <h3>Hiện chưa có bác sĩ nào trên hệ thống</h3>
+        <p>Vui lòng quay lại sau.</p>
+      </div>
+    );
   }
 
   // Sắp xếp bác sĩ theo rating cao nhất lên đầu để làm Featured
@@ -63,8 +116,10 @@ export default function DoctorList({ doctors }) {
                 borderRadius: '50%',
                 border: '6px solid rgba(255,255,255,0.3)',
                 objectFit: 'cover',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)'
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+                cursor: 'pointer' // Gợi ý click
               }}
+              onClick={() => navigate(`/doctor-view/${featuredDoctor.id}`)} // Bấm ảnh để xem chi tiết
             />
             <span title="Bác sĩ ưu tú" style={{
               position: 'absolute',
@@ -103,27 +158,51 @@ export default function DoctorList({ doctors }) {
               <strong>{featuredDoctor.rating}</strong> ({featuredDoctor.reviews} lượt đánh giá)
             </div>
           </div>
-          <button 
-            onClick={() => navigate(`/appointment?doctorId=${featuredDoctor.id}`)}
-            style={{
-              padding: '16px 35px',
-              background: 'white',
-              color: '#764ba2',
-              border: 'none',
-              borderRadius: '12px',
-              fontWeight: '700',
-              fontSize: '1rem',
-              cursor: 'pointer',
-              transition: 'all 0.3s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px'
-            }}
-            onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2)'; }}
-            onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-          >
-            <i className="far fa-calendar-check"></i> Đặt lịch khám ngay
-          </button>
+          
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <button 
+              // SỬA TẠI ĐÂY: Truyền thêm doctorName
+              onClick={() => navigate(`/appointment?doctorId=${featuredDoctor.id}&doctorName=${encodeURIComponent(featuredDoctor.name)}`)}
+              style={{
+                padding: '16px 35px',
+                background: 'white',
+                color: '#764ba2',
+                border: 'none',
+                borderRadius: '12px',
+                fontWeight: '700',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+            >
+              <i className="far fa-calendar-check"></i> Đặt lịch khám
+            </button>
+            
+            {/* Nút Xem hồ sơ chi tiết */}
+            <button 
+              onClick={() => navigate(`/doctor-view/${featuredDoctor.id}`)}
+              style={{
+                padding: '16px 25px',
+                background: 'transparent',
+                color: 'white',
+                border: '2px solid white',
+                borderRadius: '12px',
+                fontWeight: '700',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                transition: 'all 0.3s'
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              Xem hồ sơ
+            </button>
+          </div>
         </div>
       </div>
 
@@ -151,16 +230,23 @@ export default function DoctorList({ doctors }) {
                 onMouseOver={(e) => { e.currentTarget.style.borderColor = '#007bff'; e.currentTarget.style.transform = 'translateX(5px)'; }}
                 onMouseOut={(e) => { e.currentTarget.style.borderColor = '#f1f2f6'; e.currentTarget.style.transform = 'translateX(0)'; }}
               >
-                {/* Avatar */}
+                {/* Avatar (Click để xem hồ sơ) */}
                 <img
                   src={doctor.img}
                   alt={doctor.name}
-                  style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #f8f9fa' }}
+                  onClick={() => navigate(`/doctor-view/${doctor.id}`)}
+                  style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #f8f9fa', cursor: 'pointer' }}
                 />
 
                 {/* Info Center */}
                 <div>
-                  <h4 style={{ margin: '0 0 5px 0', fontSize: '1.2rem', color: '#2c3e50' }}>{doctor.name}</h4>
+                  <h4 
+                    // SỬA TẠI ĐÂY: Trỏ đúng về doctor-view
+                    onClick={() => navigate(`/doctor-view/${doctor.id}`)}
+                    style={{ margin: '0 0 5px 0', fontSize: '1.2rem', color: '#2c3e50', cursor: 'pointer' }}
+                  >
+                    {doctor.name}
+                  </h4>
                   <p style={{ color: '#007bff', fontWeight: '600', margin: '0 0 8px 0', fontSize: '0.95rem' }}>{doctor.specialty}</p>
                   <p style={{ fontSize: '0.85rem', color: '#636e72', margin: 0 }}>
                     <i className="fas fa-medal" style={{ marginRight: '6px', color: '#fab1a0' }}></i> {doctor.experience}
@@ -176,7 +262,8 @@ export default function DoctorList({ doctors }) {
                     </span>
                   </div>
                   <button 
-                    onClick={() => navigate(`/appointment?doctorId=${doctor.id}`)}
+                    // SỬA TẠI ĐÂY: Truyền thêm doctorName
+                    onClick={() => navigate(`/appointment?doctorId=${doctor.id}&doctorName=${encodeURIComponent(doctor.name)}`)}
                     style={{
                       width: '100%',
                       padding: '10px',
