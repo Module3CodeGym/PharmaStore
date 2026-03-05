@@ -32,16 +32,21 @@ import Checkout from "./pages/User/Cart/Checkout";
 import MyOrders from "./pages/User/Orders/MyOrders";
 import OrderDetail from "./pages/User/Orders/OrderDetail";
 
-// Profile
+// Profile & User Pages
 import Profile from "./pages/User/Profile/Profile";
 import UploadPrescription from "./pages/User/UploadPrescription";
 import MyHealth from "./pages/User/Profile/MyHealth";
 import PrescriptionDetail from "./pages/User/PrescriptionDetail";
-
-// Chat User
+import ViewProfileDoctor from "./pages/User/Profile/ViewProfileDoctor";
 import UserChat from "./pages/User/Chat/UserChat";
+import Appointment from "./pages/User/Appointment";
+import DoctorList from './pages/User/DoctorList'; // Trang danh sách bác sĩ cho User
 
+<<<<<<< Updated upstream
 // Doctor Pages
+=======
+// Doctor Internal Pages
+>>>>>>> Stashed changes
 import DoctorChat from "./pages/Doctor/Chat"; 
 import DoctorDashboard from "./pages/Doctor/DoctorDashboard";
 import DoctorProfile from "./pages/Doctor/Profile";
@@ -50,8 +55,7 @@ import DoctorExam from "./pages/Doctor/Exam/DoctorExam";
 import DoctorExamList from "./pages/Doctor/Exam/DoctorExamList";
 import DoctorPatients from "./pages/Doctor/Patients/DoctorPatients";
 import PatientDetail from "./pages/Doctor/Patients/PatientDetail";
-import DoctorPrescriptionList from "./pages/Doctor/Prescriptions/DoctorPrescriptions";// Appointment
-import Appointment from "./pages/User/Appointment";
+import DoctorPrescriptionList from "./pages/Doctor/Prescriptions/DoctorPrescriptions";
 
 // Pharmacist
 import PharmacistDashboard from "./pages/Pharmacist/PharmacistDashBoard";
@@ -60,7 +64,11 @@ import PharmacistInventory from "./pages/Pharmacist/PharmacistInventory";
 import PharmacistOrders from "./pages/Pharmacist/PharmacistOrders";
 import PharmacistPrescriptionHistory from './pages/Pharmacist/PharmacistPrescriptionHistory';
 
+<<<<<<< Updated upstream
 // --- Layout Chính cho khách vãng lai ---
+=======
+// --- Layout Chính cho khách vãng lai & Người dùng ---
+>>>>>>> Stashed changes
 const MainLayout = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
@@ -85,7 +93,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/pharmacist/register" element={<PharmacistRegister />} />
 
-        {/* --- NHÓM 2: KHÁCH HÀNG (Dùng Header/Footer chung) --- */}
+        {/* --- NHÓM 2: NGƯỜI DÙNG (Bệnh nhân) --- */}
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Home />} />
           <Route path="products" element={<ProductList />} />
@@ -94,19 +102,21 @@ function App() {
           <Route path="appointment" element={<Appointment />} />
           <Route path="myhealth" element={<MyHealth />} />
           <Route path="checkout" element={<Checkout />} />
-          <Route path="/user/prescription/:id" element={<PrescriptionDetail />} />
+          <Route path="prescription-detail/:id" element={<PrescriptionDetail />} />
+          <Route path="doctor-view/:id" element={<ViewProfileDoctor />} />
+          <Route path="doctors" element={<DoctorList />} />
+
+          {/* Các trang yêu cầu UserLayout (có Sidebar cá nhân) */}
+          <Route element={<UserLayout />}>
+            <Route path="orders" element={<MyOrders />} />
+            <Route path="orders/:id" element={<OrderDetail />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="upload-prescription" element={<UploadPrescription />} />
+            <Route path="chat" element={<UserChat />} />
+          </Route>
         </Route>
 
-        {/* --- NHÓM 3: NGƯỜI DÙNG ĐÃ ĐĂNG NHẬP --- */}
-        <Route element={<UserLayout />}>
-          <Route path="orders" element={<MyOrders />} />
-          <Route path="orders/:id" element={<OrderDetail />} />
-          <Route path="profile" element={<Profile />} />
-          <Route path="upload-prescription" element={<UploadPrescription />} />
-          <Route path="chat" element={<UserChat />} />
-        </Route>
-
-        {/* --- NHÓM 4: BÁC SĨ --- */}
+        {/* --- NHÓM 3: HỆ THỐNG BÁC SĨ (Nội bộ) --- */}
         <Route path="/doctor" element={<DoctorLayout />}>
           <Route index element={<DoctorDashboard />} />
           <Route path="chat" element={<DoctorChat />} />
@@ -119,10 +129,9 @@ function App() {
           <Route path="prescriptions" element={<DoctorPrescriptionList />} />
         </Route>
 
-        {/* --- NHÓM 5: DƯỢC SĨ (PHARMACIST) --- */}
+        {/* --- NHÓM 4: HỆ THỐNG DƯỢC SĨ --- */}
         <Route path="/pharmacist">
-          {/* Bạn có thể tạo PharmacistLayout tương tự DoctorLayout nếu muốn có Sidebar riêng */}
-          <Route path="dashboard" element={<PharmacistDashboard />} />
+          <Route index element={<PharmacistDashboard />} />
           <Route path="inventory" element={<PharmacistInventory />} />
           <Route path="orders" element={<PharmacistOrders />} />
           <Route path="prescription/:recordId" element={<CreatePrescription />} />

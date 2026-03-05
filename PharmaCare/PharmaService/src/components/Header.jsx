@@ -17,12 +17,38 @@ const Header = () => {
   const navigate = useNavigate();
   const { totalItems } = useCart(); 
 
+<<<<<<< Updated upstream
+=======
+  // --- LOGIC TÌM KIẾM ---
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      navigate(`/?s=${encodeURIComponent(searchTerm.trim())}`);
+    } else {
+      navigate(`/`);
+    }
+  };
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const queryParams = new URLSearchParams(location.search);
+    setSearchTerm(queryParams.get('s') || "");
+  }, [location.search]);
+
+  // --- LOGIC AUTH & NOTIFICATIONS (ĐÃ FIX LỖI) ---
+>>>>>>> Stashed changes
+  useEffect(() => {
+    // 1. Tạo biến để giữ "phích cắm" lắng nghe thông báo
+    let unsubscribeNotify = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+<<<<<<< Updated upstream
         
         // 1. Lấy tên hiển thị
+=======
+
+        // 2. Lấy tên hiển thị từ Firestore
+>>>>>>> Stashed changes
         try {
           const docRef = doc(db, "users", currentUser.uid);
           const docSnap = await getDoc(docRef);
@@ -32,29 +58,63 @@ const Header = () => {
             setDisplayName(currentUser.displayName || currentUser.email.split('@')[0]);
           }
         } catch (error) {
+<<<<<<< Updated upstream
           console.error("Lỗi lấy tên:", error);
         }
 
         // 2. LẮNG NGHE THÔNG BÁO THỜI GIAN THỰC
+=======
+          console.error("Lỗi lấy thông tin user:", error);
+          setDisplayName(currentUser.email.split('@')[0]);
+        }
+
+        // 3. LẮNG NGHE THÔNG BÁO THỜI GIAN THỰC
+>>>>>>> Stashed changes
         const q = query(
           collection(db, "notifications"),
           where("userId", "==", currentUser.uid),
           orderBy("createdAt", "desc")
         );
 
+<<<<<<< Updated upstream
         const unsubscribeNotify = onSnapshot(q, (snapshot) => {
           const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setNotifications(data);
+=======
+        // Gán hàm tắt lắng nghe vào biến unsubscribeNotify
+        unsubscribeNotify = onSnapshot(q, (snapshot) => {
+          const data = snapshot.docs.map(doc => {
+            const item = doc.data();
+            return { 
+              id: doc.id, 
+              ...item,
+              message: item.message ? item.message.replace('undefined', 'Bác sĩ') : "Thông báo mới"
+            };
+          });
+          setNotifications(data);
+        }, (error) => {
+          // Bắt lỗi ngầm để tránh văng thông báo đỏ
+          console.error("Lỗi ngầm khi lắng nghe thông báo:", error.code);
+>>>>>>> Stashed changes
         });
 
-        return () => unsubscribeNotify();
       } else {
+        // 4. NGƯỜI DÙNG ĐĂNG XUẤT: RÚT PHÍCH CẮM THÔNG BÁO NGAY LẬP TỨC
+        if (unsubscribeNotify) {
+          unsubscribeNotify(); // Tắt vòi hút dữ liệu
+          unsubscribeNotify = null; // Xóa sạch biến
+        }
         setUser(null);
         setDisplayName("Khách hàng");
         setNotifications([]);
       }
     });
-    return () => unsubscribe();
+
+    // Cleanup khi toàn bộ component Header bị hủy
+    return () => {
+      if (unsubscribeNotify) unsubscribeNotify();
+      unsubscribeAuth();
+    };
   }, []);
 
   // Đếm số thông báo chưa đọc

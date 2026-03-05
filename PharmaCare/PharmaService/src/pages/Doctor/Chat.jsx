@@ -7,17 +7,18 @@ import {
 import './Chat.css';
 
 const DoctorChat = () => {
-  const [chats, setChats] = useState([]); // Danh sách người cần tư vấn
-  const [selectedChat, setSelectedChat] = useState(null); // Cuộc trò chuyện đang chọn
-  const [messages, setMessages] = useState([]); // Tin nhắn chi tiết
+  const [chats, setChats] = useState([]);
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   
   const messagesEndRef = useRef(null);
 
-  // --- 1. LẤY DANH SÁCH CHAT (SIDEBAR) ---
+  // --- 1. LẤY DANH SÁCH CHAT (Cập nhật logic Unsubscribe chuẩn) ---
   useEffect(() => {
-    // Sắp xếp theo 'updatedAt' giảm dần (desc) -> Tin mới nhất lên đầu
-    const q = query(collection(db, "chats"), orderBy("updatedAt", "desc"));
+    if (!auth.currentUser) return;
+
+    const q = query(collection(db, "chats"), orderBy("lastMessageTime", "desc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const chatList = snapshot.docs.map(doc => ({
@@ -25,148 +26,139 @@ const DoctorChat = () => {
         ...doc.data()
       }));
       setChats(chatList);
+    }, (error) => {
+      console.error("Lỗi Rules Sidebar:", error.code);
     });
 
     return () => unsubscribe();
   }, []);
 
-  // --- 2. LẤY TIN NHẮN CỦA CHAT ĐANG CHỌN ---
+  // --- 2. LẤY TIN NHẮN (Fix lỗi hiển thị và Permission) ---
   useEffect(() => {
     if (!selectedChat) return;
 
-    // Đánh dấu đã đọc khi bác sĩ bấm vào xem (nếu chưa đọc)
-    if (!selectedChat.isReadByDoctor) {
-      const chatRef = doc(db, "chats", selectedChat.id);
-      // Chỉ update trên Firebase, state local sẽ tự update nhờ onSnapshot ở trên
-      updateDoc(chatRef, { isReadByDoctor: true }).catch(err => console.error(err));
-    }
+    // Đánh dấu đã đọc an toàn
+    const markAsRead = async () => {
+      if (!selectedChat.isReadByDoctor) {
+        try {
+          const chatRef = doc(db, "chats", selectedChat.id);
+          await updateDoc(chatRef, { isReadByDoctor: true });
+        } catch (err) {
+          console.error("Rules chặn đánh dấu đã đọc:", err.code);
+        }
+      }
+    };
+    markAsRead();
 
     const messagesRef = collection(db, "chats", selectedChat.id, "messages");
-    // Tin nhắn cũ ở trên, mới ở dưới (asc)
     const q = query(messagesRef, orderBy("createdAt", "asc"));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    // Lắng nghe tin nhắn với hàm dọn dẹp để tránh lỗi snapshot listener
+    const unsubscribeMessages = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       setMessages(msgs);
-      scrollToBottom();
+      setTimeout(scrollToBottom, 100); // Đợi DOM render rồi scroll
+    }, (error) => {
+      console.error("Lỗi Rules tin nhắn:", error.code);
     });
 
-    return () => unsubscribe();
-  }, [selectedChat]); // Chạy lại khi đổi chat khác
+    return () => unsubscribeMessages();
+  }, [selectedChat?.id]); // Chỉ chạy lại khi ID chat thay đổi thực sự
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // --- 3. HÀM XỬ LÝ THỜI GIAN (Fix lỗi hiển thị) ---
   const formatTime = (timestamp) => {
-    if (!timestamp) return '...'; // Đang gửi...
-    
-    // Nếu là Firestore Timestamp (có seconds)
-    if (timestamp.seconds) {
-      return new Date(timestamp.seconds * 1000).toLocaleTimeString('vi-VN', {
-        hour: '2-digit', 
-        minute:'2-digit'
-      });
-    }
-    // Nếu là Date object thường (fallback)
-    return new Date(timestamp).toLocaleTimeString('vi-VN', {
-      hour: '2-digit', 
-      minute:'2-digit'
-    });
+    if (!timestamp) return '...';
+    const date = timestamp.seconds ? new Date(timestamp.seconds * 1000) : new Date(timestamp);
+    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute:'2-digit' });
   };
 
-  // --- 4. GỬI TIN NHẮN ---
+  // --- 4. GỬI TIN NHẮN (Sử dụng UID thực tế của Bác sĩ) ---
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedChat) return;
+    if (!newMessage.trim() || !selectedChat || !auth.currentUser) return;
 
     const textToSend = newMessage;
-    setNewMessage(""); // Xóa ô nhập ngay
+    const currentChatId = selectedChat.id;
+    setNewMessage("");
 
     try {
-      // A. Thêm tin nhắn vào sub-collection
-      await addDoc(collection(db, "chats", selectedChat.id, "messages"), {
+      // Dùng UID thật để Rules cho phép write
+      await addDoc(collection(db, "chats", currentChatId, "messages"), {
         text: textToSend,
-        senderId: "DOCTOR", // Hoặc auth.currentUser.uid
+        senderId: auth.currentUser.uid, 
         createdAt: serverTimestamp(),
         isRead: false
       });
 
-      // B. Cập nhật trạng thái ra ngoài (Để nhảy lên đầu list)
-      const chatRef = doc(db, "chats", selectedChat.id);
-      await updateDoc(chatRef, {
+      await updateDoc(doc(db, "chats", currentChatId), {
         lastMessage: textToSend,
-        updatedAt: serverTimestamp(), // QUAN TRỌNG: Cập nhật giờ để sort
-        isReadByDoctor: true // Bác sĩ nhắn thì đương nhiên đã đọc
+        updatedAt: serverTimestamp(),
+        isReadByDoctor: true,
+        isReadByUser: false // Thông báo cho bệnh nhân có tin mới
       });
 
     } catch (error) {
-      console.error("Lỗi gửi tin:", error);
+      console.error("Lỗi gửi tin (Kiểm tra Rules):", error.code);
     }
   };
 
   return (
     <div className="doctor-chat-container">
-      
-      {/* --- SIDEBAR TRÁI: DANH SÁCH --- */}
       <div className="chat-sidebar">
-        <div className="sidebar-header">
-          <h3>Tư vấn bệnh nhân</h3>
+        <div className="sidebar-header"><h3>Tư vấn bệnh nhân</h3></div>
+        {/* --- SIDEBAR TRÁI: DANH SÁCH --- */}
+<div className="chat-list">
+  {chats.map(chat => (
+    <div 
+      key={chat.id} 
+      className={`chat-item ${selectedChat?.id === chat.id ? 'active' : ''}`}
+      onClick={() => setSelectedChat(chat)}
+    >
+      {/* CẬP NHẬT: Lấy ảnh từ userInfo.photoURL */}
+      <img 
+        src={chat.userInfo?.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} 
+        alt="User" 
+        className="chat-avatar" 
+      />
+      <div className="chat-info">
+        <div className="chat-name-row">
+          {/* CẬP NHẬT: Lấy tên từ userInfo.displayName */}
+          <span className={`chat-name ${!chat.isReadByDoctor ? 'unread-name' : ''}`}>
+            {chat.userInfo?.displayName || "Khách hàng"}
+          </span>
+          <span className="chat-time">{formatTime(chat.lastMessageTime)}</span>
         </div>
-        <div className="chat-list">
-          {chats.map(chat => (
-            <div 
-              key={chat.id} 
-              className={`chat-item ${selectedChat?.id === chat.id ? 'active' : ''}`}
-              onClick={() => setSelectedChat(chat)}
-            >
-              <img 
-                src={chat.userAvatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} 
-                alt="User" 
-                className="chat-avatar"
-              />
-              <div className="chat-info">
-                <div className="chat-name-row">
-                  {/* Nếu chưa đọc: Tên in đậm (class unread-name) */}
-                  <span className={`chat-name ${!chat.isReadByDoctor ? 'unread-name' : ''}`}>
-                    {chat.userName || "Khách hàng"}
-                  </span>
-                  <span className="chat-time">{formatTime(chat.updatedAt)}</span>
-                </div>
-                
-                <div className="chat-preview-row">
-                  {/* Nếu chưa đọc: Nội dung in đậm (class bold-text) */}
-                  <p className={`chat-preview ${!chat.isReadByDoctor ? 'bold-text' : ''}`}>
-                    {/* Thêm icon phong bì nếu chưa đọc */}
-                    {!chat.isReadByDoctor && "📩 "} 
-                    {chat.lastMessage}
-                  </p>
-                  
-                  {/* Nếu chưa đọc: Hiện chấm đỏ */}
-                  {!chat.isReadByDoctor && <span className="unread-dot"></span>}
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="chat-preview-row">
+          <p className={`chat-preview ${!chat.isReadByDoctor ? 'bold-text' : ''}`}>
+            {!chat.isReadByDoctor && "📩 "}{chat.lastMessage}
+          </p>
+          {!chat.isReadByDoctor && <span className="unread-dot"></span>}
         </div>
       </div>
+    </div>
+  ))}
+</div>
+      </div>
 
-      {/* --- KHUNG CHAT PHẢI --- */}
       <div className="chat-main">
         {selectedChat ? (
           <>
             <div className="chat-main-header">
-              <img src={selectedChat.userAvatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} alt="Avatar" />
-              <h4>{selectedChat.userName}</h4>
-            </div>
-
+              <img 
+          src={selectedChat.userInfo?.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} 
+          alt="Avatar" 
+        />
+<h4>{selectedChat.userInfo?.displayName || "Bệnh nhân"}</h4>            </div>
             <div className="chat-messages">
               {messages.map(msg => {
-                const isMe = msg.senderId === "DOCTOR" || msg.senderId === auth.currentUser?.uid;
+                // Kiểm tra người gửi là chính bác sĩ đang đăng nhập
+                const isMe = msg.senderId === auth.currentUser?.uid;
                 return (
                   <div key={msg.id} className={`message-row ${isMe ? 'doctor-msg' : 'user-msg'}`}>
                     <div className="message-bubble">
@@ -178,14 +170,8 @@ const DoctorChat = () => {
               })}
               <div ref={messagesEndRef} />
             </div>
-
             <form className="chat-input-area" onSubmit={handleSend}>
-              <input 
-                type="text" 
-                placeholder="Nhập tin nhắn..." 
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-              />
+              <input type="text" placeholder="Nhập tin nhắn..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
               <button type="submit"><i className="fas fa-paper-plane"></i></button>
             </form>
           </>
