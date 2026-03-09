@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../../firebaseConfig'; 
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, orderBy } from 'firebase/firestore'; // Sửa: Thêm các hàm truy vấn
 import { updateProfile } from 'firebase/auth';
 
 // --- 1. IMPORT TOASTIFY ---
@@ -11,6 +11,7 @@ import './Profile.css';
 
 const DoctorProfile = () => {
   const [loading, setLoading] = useState(false);
+  const [reviews, setReviews] = useState([]); // MỚI: State lưu lịch sử đánh giá
   const [userData, setUserData] = useState({
     displayName: '',
     email: '',
@@ -18,14 +19,19 @@ const DoctorProfile = () => {
     specialty: 'Khoa Nội tổng quát',
     experience: '',
     bio: '',
-    photoURL: ''
+    photoURL: '',
+    rating: 0, // MỚI: Thêm trường điểm đánh giá
+    reviewCount: 0 // MỚI: Thêm trường số lượt đánh giá
   });
 
-  // Lấy dữ liệu user khi vào trang
+  // Lấy dữ liệu user và lịch sử đánh giá khi vào trang
   useEffect(() => {
+    let unsubscribeReviews = () => {};
+
     const fetchUserData = async () => {
       const user = auth.currentUser;
       if (user) {
+        // 1. Lấy thông tin Profile của Bác sĩ
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         
@@ -38,12 +44,33 @@ const DoctorProfile = () => {
             specialty: data.specialty || 'Khoa Nội tổng quát',
             experience: data.experience || '',
             bio: data.bio || '',
-            photoURL: data.photoURL || user.photoURL || ''
+            photoURL: data.photoURL || user.photoURL || '',
+            rating: data.rating || 0,
+            reviewCount: data.reviewCount || 0
           });
         }
+
+        // 2. MỚI: Lấy danh sách đánh giá từ bệnh nhân
+        const q = query(
+            collection(db, "reviews"),
+            where("doctorId", "==", user.uid),
+            orderBy("createdAt", "desc")
+        );
+        
+        unsubscribeReviews = onSnapshot(q, (snapshot) => {
+            const reviewData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setReviews(reviewData);
+        });
       }
     };
+
     fetchUserData();
+
+    // Cleanup function để tránh memory leak
+    return () => unsubscribeReviews();
   }, []);
 
   // Xử lý khi nhập liệu
@@ -105,7 +132,7 @@ const DoctorProfile = () => {
   return (
     <div className="profile-container">
       
-      {/* Container chứa Toast (Bắt buộc phải có để hiện thông báo) */}
+      {/* Container chứa Toast */}
       <ToastContainer position="top-right" theme="light" />
 
       <h2 className="page-title">Hồ sơ cá nhân</h2>
@@ -138,14 +165,15 @@ const DoctorProfile = () => {
           <h3 className="profile-name">{userData.displayName || "Chưa đặt tên"}</h3>
           <p className="profile-role">{userData.specialty}</p>
           
+          {/* MỚI: Sửa lại thống kê để lấy dữ liệu thực từ Firestore */}
           <div className="profile-stats">
             <div className="stat-item">
-              <strong>120+</strong>
-              <span>Bệnh nhân</span>
+              <strong>{userData.reviewCount || 0}</strong>
+              <span>Lượt đánh giá</span>
             </div>
             <div className="stat-item">
-              <strong>4.8 ⭐</strong>
-              <span>Đánh giá</span>
+              <strong>{Number(userData.rating || 0).toFixed(1)} ⭐</strong>
+              <span>Điểm TB</span>
             </div>
           </div>
         </div>
@@ -233,6 +261,37 @@ const DoctorProfile = () => {
         </div>
 
       </div>
+
+      {/* --- MỚI: KHU VỰC LỊCH SỬ ĐÁNH GIÁ CỦA BỆNH NHÂN --- */}
+      <div className="profile-card" style={{ marginTop: '30px' }}>
+        <h4 className="form-header" style={{ marginBottom: '20px' }}>📜 Nhận xét từ bệnh nhân</h4>
+        
+        {reviews.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '30px', color: '#b2bec3' }}>
+                Chưa có bệnh nhân nào để lại đánh giá cho bạn.
+            </div>
+        ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                {reviews.map(review => (
+                    <div key={review.id} style={{ padding: '20px', background: '#f8f9fa', borderRadius: '12px', border: '1px solid #eee' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <strong style={{ color: '#0984e3', fontSize: '1.1rem' }}>{review.patientName}</strong>
+                            <span style={{ fontSize: '1.2rem', color: '#ffc107', letterSpacing: '2px' }}>
+                                {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                            </span>
+                        </div>
+                        <p style={{ margin: '0 0 15px 0', color: '#2d3436', fontSize: '0.95rem', fontStyle: 'italic' }}>
+                            "{review.comment || "Không có nhận xét chi tiết"}"
+                        </p>
+                        <div style={{ fontSize: '0.8rem', color: '#b2bec3', textAlign: 'right' }}>
+                            {review.createdAt?.seconds ? new Date(review.createdAt.seconds * 1000).toLocaleDateString('vi-VN') : 'Mới đây'}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )}
+      </div>
+
     </div>
   );
 };
