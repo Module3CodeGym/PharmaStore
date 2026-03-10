@@ -140,6 +140,9 @@ const DoctorLayout = () => {
           <NavLink to="/doctor/chat" className={({isActive}) => isActive ? "menu-item active" : "menu-item"}>
             <i className="fas fa-comments"></i><span>Tin nhắn</span>
           </NavLink>
+          <NavLink to="/doctor/profile" className={({isActive}) => isActive ? "menu-item active" : "menu-item"}>
+            <i className="fas fa-user-md"></i><span>Hồ sơ cá nhân</span>
+          </NavLink>
         </nav>
         <div className="sidebar-footer">
           <button onClick={handleLogout} className="logout-btn">
