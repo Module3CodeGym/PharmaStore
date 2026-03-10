@@ -1,0 +1,50 @@
+/* Style cho thanh Tab */
+.order-tabs {
+    overflow-x: auto;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.tab-btn {
+    font-size: 1rem;
+    color: #555;
+    border-bottom: 2px solid transparent !important;
+    white-space: nowrap;
+    padding: 0 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    outline: none;
+}
+
+.tab-btn:hover {
+    color: #ee4d2d; /* Màu cam đặc trưng Shopee */
+}
+
+.tab-btn.active {
+    color: #ee4d2d;
+    border-bottom: 2px solid #ee4d2d !important;
+    font-weight: 500;
+}
+
+/* Style màu sắc cho trạng thái đơn hàng */
+.status-text {
+    font-size: 0.9rem;
+}
+
+.status-text.pending { color: #f39c12; /* Vàng cam */ }
+.status-text.confirmed { color: #3498db; /* Xanh dương */ }
+.status-text.shipping { color: #16a085; /* Xanh ngọc */ }
+.status-text.completed { color: #27ae60; /* Xanh lá */ }
+.status-text.cancelled { color: #e74c3c; /* Đỏ */ }
+
+/* Card đơn hàng */
+.card-order {
+    transition: box-shadow 0.2s;
+}
+
+.card-order:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
